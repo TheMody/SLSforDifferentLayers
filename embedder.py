@@ -55,7 +55,6 @@ class NLP_embedder(nn.Module):
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         self.model = BertModel.from_pretrained('bert-base-uncased')
         self.output_length = 768
-        self.importance = 675
  
 #         from transformers import RobertaTokenizer, RobertaModel
 #         self.tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
@@ -94,15 +93,13 @@ class NLP_embedder(nn.Module):
                                 paramlist.append(param)
                              #   print("included", name , "in", i)
                         else:
-                            if i == args.number_of_diff_lrs-1:
+                            if i == args.number_of_diff_lrs-1 and not "pooler" in name:
                                 paramlist.append(param)
-                               # print("included", name , "in", i)
-                #"adam", "radam", "rmsprop", "sgd", "adadelta", "adagrad"
+                                print("included", name , "in", i)
+                                print(name, param.requires_grad, param.grad)
                 if args.opts["opt"] == "adam":    
-                
                     self.optimizer.append(optim.Adam(paramlist, lr=args.opts["lr"] ))
                 if args.opts["opt"] == "adamsls":    
-                
                     self.optimizer.append(AdamSLS(paramlist ))
 
         else:
@@ -113,7 +110,7 @@ class NLP_embedder(nn.Module):
         x = self.model(**x_in).last_hidden_state
         x = x[:, self.lasthiddenstate]
         x = self.fc1(x)
-        x = self.softmax(x)
+      #  x = self.softmax(x)
         return x
     
     
@@ -146,28 +143,36 @@ class NLP_embedder(nn.Module):
                 batch_y = batch_y.to(device)
                 batch_x = batch_x.to(device)
 
+                if self.args.opts["opt"] == "adamsls":
+                    closure = lambda : self.criterion(self(batch_x), batch_y)
 
-                closure = lambda : self.criterion(self(batch_x), batch_y)
+                    for a in range(self.args.number_of_diff_lrs):
+                        self.optimizer[a].zero_grad()
 
-                for i in range(self.args.number_of_diff_lrs):
-                    self.optimizer[i].zero_grad()
-                # y_pred = self(batch_x)
+                    for a in range(self.args.number_of_diff_lrs):
+                        loss = self.optimizer[a].step(closure = closure)
+                else:
+                    for a in range(self.args.number_of_diff_lrs):
+                        self.optimizer[a].zero_grad()
+                    y_pred = self(batch_x)
 
-                # loss = self.criterion(y_pred, batch_y)    
-                losses = []
-                for i in range(self.args.number_of_diff_lrs):
-                    loss = self.optimizer[i].step(closure = closure)
-                    losses.append(loss)
-                loss = sum(losses)
-                loss.backward()
-                
+                    loss = self.criterion(y_pred, batch_y)    
+                    loss.backward()
+                    # for a in range(self.args.number_of_diff_lrs):
+                    #     self.optimizer[a].step()
+                    #     if a == 9:
+                    #         for group in self.optimizer[a].param_groups:
+                    #             for p in group["params"]:
+                    #                 print(p.grad)
+                              
+
+
 
                 if i % np.max((1,int((len(x)/self.batch_size)*0.0001))) == 0:
                     print(i, loss.item())
-               # print(y_pred, batch_y)
                 if self.args.number_of_diff_lrs == 1:
-                    for i in range(self.args.number_of_diff_lrs):
-                        self.scheduler[i].step()
+                    for a in range(self.args.number_of_diff_lrs):
+                        self.scheduler[a].step()
             if X_val != None:
                 with torch.no_grad():
                     accuracy = self.evaluate(X_val, Y_val)

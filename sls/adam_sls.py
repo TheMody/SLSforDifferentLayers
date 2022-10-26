@@ -91,7 +91,6 @@ class AdamSLS(StochLineSearchBase):
         params_current = copy.deepcopy(self.params)
         grad_current = get_grad_list(self.params)
         grad_norm = compute_grad_norm(grad_current)
-
         #  Gv options
         # =============
         if self.gv_option in ['scalar']:
