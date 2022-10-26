@@ -102,7 +102,11 @@ class NLP_embedder(nn.Module):
                     self.optimizer.append(AdamSLS(paramlist ))
 
         else:
-            self.optimizer.append(optim.Adam(self.parameters(), lr=args.opts["lr"] ))
+            if args.opts["opt"] == "adam":    
+                self.optimizer.append(optim.Adam(self.parameters(), lr=args.opts["lr"] ))
+            if args.opts["opt"] == "adamsls":    
+                self.optimizer.append(AdamSLS( [param for name,param in self.named_parameters() if not "pooler" in name]))
+            
         
     def forward(self, x_in):
         x = self.model(**x_in).last_hidden_state
@@ -117,7 +121,7 @@ class NLP_embedder(nn.Module):
         self.second_head = second_head
         
         self.scheduler =[]
-        if self.args.number_of_diff_lrs == 1:
+        if not self.args.opts["opt"] == "adamsls":
             for i in range(self.args.number_of_diff_lrs): 
                 self.scheduler.append(CosineWarmupScheduler(optimizer= self.optimizer[i], 
                                                 warmup = math.ceil(len(x)*epochs *0.1 / self.batch_size) ,

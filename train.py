@@ -45,10 +45,6 @@ def train(args, config):
 
     
     print("running baseline")
-    class dummy():
-        def __init__(self):
-            return
-    args = dummy()
     args.number_of_diff_lrs = int(config["DEFAULT"]["num_diff_opt"])
     args.opts = {"lr": lr, "opt": optimizer}
     num_classes = 2

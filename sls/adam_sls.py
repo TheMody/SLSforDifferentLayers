@@ -90,6 +90,11 @@ class AdamSLS(StochLineSearchBase):
         # save the current parameters:
         params_current = copy.deepcopy(self.params)
         grad_current = get_grad_list(self.params)
+        # not_None_pos = [i for i,g in enumerate(grad_current) if not g == None]
+        # grad_current = [grad_current[i] for i in not_None_pos]
+        # self.params = [self.params[i] for i in not_None_pos]
+        
+
         grad_norm = compute_grad_norm(grad_current)
         #  Gv options
         # =============

@@ -1,0 +1,8 @@
+First Results:
+Acc with 10 different adamsls after 5 epochs on mrpc:
+0.811 time ca 370 secs
+Acc with 1 adam after 5 epochs:
+0.811 time ca 30secs
+Acc with 1 adamSLS after 5 epochs:
+0.823 time ca 50 secs
+
