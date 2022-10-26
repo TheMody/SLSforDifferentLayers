@@ -63,7 +63,6 @@ class NLP_embedder(nn.Module):
 
         
         self.fc1 = nn.Linear(self.output_length,self.num_classes)
-     #   self.fc2 = nn.Linear(self.output_length,self.num_classes2)
         self.criterion = torch.nn.CrossEntropyLoss()
         
 
@@ -104,13 +103,11 @@ class NLP_embedder(nn.Module):
 
         else:
             self.optimizer.append(optim.Adam(self.parameters(), lr=args.opts["lr"] ))
-        self.softmax = torch.nn.Softmax(dim=1)
         
     def forward(self, x_in):
         x = self.model(**x_in).last_hidden_state
         x = x[:, self.lasthiddenstate]
         x = self.fc1(x)
-      #  x = self.softmax(x)
         return x
     
     
@@ -132,13 +129,10 @@ class NLP_embedder(nn.Module):
         for e in range(epochs):
             start = time.time()
             for i in range(math.ceil(len(x) / self.batch_size)):
-              #  batch_x, batch_y = next(iter(data))
                 ul = min((i+1) * self.batch_size, len(x))
                 batch_x = x[i*self.batch_size: ul]
                 batch_y = y[i*self.batch_size: ul]
-           #     batch_x = glue_convert_examples_to_features(, tokenizer, max_length=128,  task=task_name)
                 batch_x = self.tokenizer(batch_x, return_tensors="pt", padding=self.padding, max_length = 256, truncation = True)
-             #   print(batch_x["input_ids"].size())
                 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
                 batch_y = batch_y.to(device)
                 batch_x = batch_x.to(device)
@@ -158,12 +152,6 @@ class NLP_embedder(nn.Module):
 
                     loss = self.criterion(y_pred, batch_y)    
                     loss.backward()
-                    # for a in range(self.args.number_of_diff_lrs):
-                    #     self.optimizer[a].step()
-                    #     if a == 9:
-                    #         for group in self.optimizer[a].param_groups:
-                    #             for p in group["params"]:
-                    #                 print(p.grad)
                               
 
 

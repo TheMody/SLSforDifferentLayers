@@ -37,6 +37,8 @@ def train(args, config):
     batch_size = int(config["DEFAULT"]["batch_size"])
 
     dataset = config["DEFAULT"]["dataset"]
+    optimizer = config["DEFAULT"]["optim"]
+
 
     print("dataset:", dataset)
     lr = 2e-5
@@ -47,8 +49,8 @@ def train(args, config):
         def __init__(self):
             return
     args = dummy()
-    args.number_of_diff_lrs = 10
-    args.opts = {"lr": lr, "opt": "adamsls"}
+    args.number_of_diff_lrs = optimizer = config["DEFAULT"]["num_diff_opt"]
+    args.opts = {"lr": lr, "opt": optimizer}
     num_classes = 2
     if "mnli" in dataset:
         num_classes = 3
@@ -59,9 +61,8 @@ def train(args, config):
     model = model.to(device)
     print("loading dataset")
     X_train, X_val, X_test, Y_train, Y_val, Y_test = load_data(name=dataset)
-    print("training model on unshifted dataset", dataset)
+    print("training model on dataset", dataset)
     model.fit(X_train, Y_train, epochs=max_epochs)
     accuracy = float(model.evaluate(X_val,Y_val, second_head = False).cpu().numpy())
     print("acuraccy on unshifted ds:", accuracy)
-    print("training model on shifted dataset", dataset)
        
