@@ -6,4 +6,4 @@ seed = 42
 epochs = 5
 dataset = mrpc
 optim = adam
-num_diff_opt = 10
+num_diff_opt = 1

@@ -152,15 +152,16 @@ class NLP_embedder(nn.Module):
 
                     loss = self.criterion(y_pred, batch_y)    
                     loss.backward()
-                              
+                    for a in range(self.args.number_of_diff_lrs):
+                        self.optimizer[a].step()
+                    for a in range(self.args.number_of_diff_lrs):
+                        self.scheduler[a].step()                              
 
 
 
                 if i % np.max((1,int((len(x)/self.batch_size)*0.0001))) == 0:
                     print(i, loss.item())
-                if self.args.number_of_diff_lrs == 1:
-                    for a in range(self.args.number_of_diff_lrs):
-                        self.scheduler[a].step()
+
             if X_val != None:
                 with torch.no_grad():
                     accuracy = self.evaluate(X_val, Y_val)

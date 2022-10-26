@@ -49,7 +49,7 @@ def train(args, config):
         def __init__(self):
             return
     args = dummy()
-    args.number_of_diff_lrs = optimizer = config["DEFAULT"]["num_diff_opt"]
+    args.number_of_diff_lrs = int(config["DEFAULT"]["num_diff_opt"])
     args.opts = {"lr": lr, "opt": optimizer}
     num_classes = 2
     if "mnli" in dataset:
