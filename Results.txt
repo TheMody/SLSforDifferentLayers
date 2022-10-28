@@ -18,3 +18,5 @@ MNLI:(3 epochs)
 
 
 
+Notes: 10 different adam as a sanity check
+
