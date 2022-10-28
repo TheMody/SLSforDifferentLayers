@@ -166,13 +166,13 @@ class NLP_embedder(nn.Module):
                     for a in range(self.args.number_of_diff_lrs):
                         self.scheduler[a].step()                              
 
-                wandb.log({"loss": loss.item() ,
-                    "steps_size_plot" : wandb.plot.line_series(
-                    xs=[i for i in range(len(self.optimizer.state['all_step_size']))],
-                    ys=[opt.state['all_step_size'] for opt in self.optimizer],
-                  #  keys=["metric Y", "metric Z"],
-                    title="Evolution of step size by layer",
-                    xname="steps")})
+                wandb.log({"loss": loss.item() })
+                    # "steps_size_plot" : wandb.plot.line_series(
+                    # xs=[i for i in range(len(self.optimizer))],
+                    # ys=[opt.state['step_size'] for opt in self.optimizer],
+                    # keys=["layer"+str(a) for a in range(len(self.optimizer))],
+                    # title="Evolution of step size by layer",
+                    # xname="steps")})
                 
                 # "step_size": [opt.state["step_size"] for opt in self.optimizer]})
                 accloss = accloss + loss.item()

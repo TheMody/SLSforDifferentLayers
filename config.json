@@ -1,9 +1,9 @@
 [DEFAULT]
-batch_size = 1
+batch_size = 32
 checkpoint = None
 directory = default
 seed = 42
 epochs = 5
-dataset = mrpcsmall
+dataset = mrpc
 optim = adam
 num_diff_opt = 1
