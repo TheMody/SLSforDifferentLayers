@@ -47,6 +47,7 @@ def train(args, config):
     print("running baseline")
     args.number_of_diff_lrs = int(config["DEFAULT"]["num_diff_opt"])
     args.opts = {"lr": lr, "opt": optimizer}
+    args.ds = dataset
     num_classes = 2
     if "mnli" in dataset:
         num_classes = 3
@@ -58,7 +59,7 @@ def train(args, config):
     print("loading dataset")
     X_train, X_val, X_test, Y_train, Y_val, Y_test = load_data(name=dataset)
     print("training model on dataset", dataset)
-    model.fit(X_train, Y_train, epochs=max_epochs)
-    accuracy = float(model.evaluate(X_val,Y_val, second_head = False).cpu().numpy())
+    model.fit(X_train, Y_train, epochs=max_epochs, X_val= X_val, Y_val = Y_val)
+    accuracy = model.evaluate(X_val,Y_val, second_head = False).item()
     print("acuraccy on unshifted ds:", accuracy)
        

@@ -1,3 +1,4 @@
+from types import NoneType
 from transformers import BertTokenizer, BertModel, ElectraTokenizer, ElectraModel
 import torch
 import torch.nn as nn
@@ -14,7 +15,7 @@ from torch.utils.data import DataLoader
 from data import load_wiki
 import os
 from sls.adam_sls import AdamSLS
-
+import wandb
 logging.set_verbosity_error()
 
 
@@ -116,12 +117,13 @@ class NLP_embedder(nn.Module):
     
     
      
-    def fit(self, x, y, epochs=1, X_val= None,Y_val= None, reporter = None, second_head = False):
+    def fit(self, x, y, epochs=1, X_val= None,Y_val= None):
+        wandb.init(project="SLSforDifferentLayers"+self.args.ds)
+        wandb.watch(self)
         
-        self.second_head = second_head
         
-        self.scheduler =[]
         if not self.args.opts["opt"] == "adamsls":
+            self.scheduler =[]
             for i in range(self.args.number_of_diff_lrs): 
                 self.scheduler.append(CosineWarmupScheduler(optimizer= self.optimizer[i], 
                                                 warmup = math.ceil(len(x)*epochs *0.1 / self.batch_size) ,
@@ -130,6 +132,8 @@ class NLP_embedder(nn.Module):
 
 
         accuracy = None
+        accsteps = 0
+        accloss = 0
         for e in range(epochs):
             start = time.time()
             for i in range(math.ceil(len(x) / self.batch_size)):
@@ -162,23 +166,28 @@ class NLP_embedder(nn.Module):
                         self.scheduler[a].step()                              
 
 
-
-                if i % np.max((1,int((len(x)/self.batch_size)*0.0001))) == 0:
-                    print(i, loss.item())
+                accloss = accloss + loss.item()
+                accsteps += 1
+                if i % np.max((1,int((len(x)/self.batch_size)*0.001))) == 0:
+                    wandb.log({"loss": accloss / accsteps})
+                  #  wandb.log({"lr": self.optimizer[].get_last_lr()[0]})
+               #     print(i, accloss/ accsteps)
+                    accsteps = 0
+                    accloss = 0
 
             if X_val != None:
                 with torch.no_grad():
-                    accuracy = self.evaluate(X_val, Y_val)
-                    print("accuracy after", e, "epochs:", float(accuracy.cpu().numpy()), "time per epoch", time.time()-start)
-                    if reporter != None:
-                        reporter(objective=float(accuracy.cpu().numpy()) / 2.0, epoch=e+1)
+                    accuracy = self.evaluate(X_val, Y_val).item()
+                    print("accuracy after", e, "epochs:",accuracy, "time per epoch", time.time()-start)
+                    wandb.log({"accuracy": accuracy})
             else:
                 print("epoch",e,"time per epoch", time.time()-start)
                 
                 
 
         return
-    
+        
+    @torch.no_grad
     def evaluate(self, X,Y, second_head = False):
         self.second_head = second_head
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

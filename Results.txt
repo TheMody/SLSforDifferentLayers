@@ -1,8 +1,20 @@
 First Results:
-Acc with 10 different adamsls after 5 epochs on mrpc:
-0.811 time ca 370 secs
-Acc with 1 adam after 5 epochs:
-0.811 time ca 30secs
-Acc with 1 adamSLS after 5 epochs:
-0.823 time ca 50 secs
+
+MRPC:(5 epochs) accuracy, time per epoch
+1 adam: 0.811 time 30
+1 adamSLS: 0.823 time 50 
+10 adamSLS: 0.811 time 370 
+
+SST2: (5 epochs)
+1 adam: 0.919724702835083 time 268.7433443069458
+1 adamSLS: 0.9231650829315186 time 555.4409956932068
+10 adamSLS: 0.9036697149276733 time 3268.2099273204803
+
+MNLI:(3 epochs)
+1 adam: 0.8372898697853088 time 3315.035003423691
+1 adamSLS: 0.8356596827507019 time 5606.206659555435
+10 adamSLS: 
+
+
+
 
