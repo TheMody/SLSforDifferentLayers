@@ -6,3 +6,5 @@ Acc with 1 adam after 5 epochs:
 Acc with 1 adamSLS after 5 epochs:
 0.823 time ca 50 secs
 
+Notes: 10 different adam as a sanity check
+
