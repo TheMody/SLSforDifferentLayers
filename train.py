@@ -60,6 +60,6 @@ def train(args, config):
     X_train, X_val, X_test, Y_train, Y_val, Y_test = load_data(name=dataset)
     print("training model on dataset", dataset)
     model.fit(X_train, Y_train, epochs=max_epochs, X_val= X_val, Y_val = Y_val)
-    accuracy = model.evaluate(X_val,Y_val, second_head = False).item()
-    print("acuraccy on unshifted ds:", accuracy)
+    accuracy = model.evaluate(X_val,Y_val).item()
+    print("acuraccy on ds:", accuracy)
        

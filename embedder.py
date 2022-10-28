@@ -1,4 +1,3 @@
-from types import NoneType
 from transformers import BertTokenizer, BertModel, ElectraTokenizer, ElectraModel
 import torch
 import torch.nn as nn
@@ -105,6 +104,8 @@ class NLP_embedder(nn.Module):
         else:
             if args.opts["opt"] == "adam":    
                 self.optimizer.append(optim.Adam(self.parameters(), lr=args.opts["lr"] ))
+            if args.opts["opt"] == "sgd":    
+                self.optimizer.append(optim.SGD(self.parameters(), lr=args.opts["lr"] ))
             if args.opts["opt"] == "adamsls":    
                 self.optimizer.append(AdamSLS( [param for name,param in self.named_parameters() if not "pooler" in name]))
             
@@ -165,13 +166,21 @@ class NLP_embedder(nn.Module):
                     for a in range(self.args.number_of_diff_lrs):
                         self.scheduler[a].step()                              
 
-
+                wandb.log({"loss": loss.item() ,
+                    "steps_size_plot" : wandb.plot.line_series(
+                    xs=[i for i in range(len(self.optimizer.state['all_step_size']))],
+                    ys=[opt.state['all_step_size'] for opt in self.optimizer],
+                  #  keys=["metric Y", "metric Z"],
+                    title="Evolution of step size by layer",
+                    xname="steps")})
+                
+                # "step_size": [opt.state["step_size"] for opt in self.optimizer]})
                 accloss = accloss + loss.item()
                 accsteps += 1
-                if i % np.max((1,int((len(x)/self.batch_size)*0.001))) == 0:
-                    wandb.log({"loss": accloss / accsteps})
+                if i % np.max((1,int((len(x)/self.batch_size)*0.1))) == 0:
+                 #   wandb.log({"loss": accloss / accsteps})
                   #  wandb.log({"lr": self.optimizer[].get_last_lr()[0]})
-               #     print(i, accloss/ accsteps)
+                    print(i, accloss/ accsteps)
                     accsteps = 0
                     accloss = 0
 
@@ -187,9 +196,8 @@ class NLP_embedder(nn.Module):
 
         return
         
-    @torch.no_grad
-    def evaluate(self, X,Y, second_head = False):
-        self.second_head = second_head
+    @torch.no_grad()
+    def evaluate(self, X,Y):
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         Y = Y.to(device)
         y_pred = self.predict(X)
