@@ -68,6 +68,7 @@ class NLP_embedder(nn.Module):
 
         self.optimizer =[]
         if args.number_of_diff_lrs > 1:
+            pparamalist = []
             for i in range(args.number_of_diff_lrs):
                 paramlist = []
                 optrangelower = math.ceil((12.0/(args.number_of_diff_lrs-2)) *(i-1))
@@ -94,20 +95,21 @@ class NLP_embedder(nn.Module):
                         else:
                             if i == args.number_of_diff_lrs-1 and not "pooler" in name:
                                 paramlist.append(param)
-                                print("included", name , "in", i)
-                                print(name, param.requires_grad, param.grad)
+                            #    print("included", name , "in", i)
+                             #   print(name, param.requires_grad, param.grad)
                 if args.opts["opt"] == "adam":    
                     self.optimizer.append(optim.Adam(paramlist, lr=args.opts["lr"] ))
-                if args.opts["opt"] == "adamsls":    
-                    self.optimizer.append(AdamSLS(paramlist ))
-
+                if args.opts["opt"] == "adamsls":  
+                    pparamalist.append(paramlist)
+            if args.opts["opt"] == "adamsls":  
+                self.optimizer.append(AdamSLS(pparamalist))
         else:
             if args.opts["opt"] == "adam":    
                 self.optimizer.append(optim.Adam(self.parameters(), lr=args.opts["lr"] ))
             if args.opts["opt"] == "sgd":    
                 self.optimizer.append(optim.SGD(self.parameters(), lr=args.opts["lr"] ))
             if args.opts["opt"] == "adamsls":    
-                self.optimizer.append(AdamSLS( [param for name,param in self.named_parameters() if not "pooler" in name]))
+                self.optimizer.append(AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]]))
             
         
     def forward(self, x_in):
@@ -125,7 +127,7 @@ class NLP_embedder(nn.Module):
         
         if not self.args.opts["opt"] == "adamsls":
             self.scheduler =[]
-            for i in range(self.args.number_of_diff_lrs): 
+            for i in range(len(self.optimizer)): 
                 self.scheduler.append(CosineWarmupScheduler(optimizer= self.optimizer[i], 
                                                 warmup = math.ceil(len(x)*epochs *0.1 / self.batch_size) ,
                                                     max_iters = math.ceil(len(x)*epochs  / self.batch_size)))
@@ -149,21 +151,21 @@ class NLP_embedder(nn.Module):
                 if self.args.opts["opt"] == "adamsls":
                     closure = lambda : self.criterion(self(batch_x), batch_y)
 
-                    for a in range(self.args.number_of_diff_lrs):
-                        self.optimizer[a].zero_grad()
+                  #  for a in range(len(self.optimizer)):
+                    self.optimizer[0].zero_grad()
 
-                    for a in range(self.args.number_of_diff_lrs):
-                        loss = self.optimizer[a].step(closure = closure)
+                  #  for a in range(len(self.optimizer)):
+                    loss = self.optimizer[0].step(closure = closure)
                 else:
-                    for a in range(self.args.number_of_diff_lrs):
+                    for a in range(len(self.optimizer)):
                         self.optimizer[a].zero_grad()
                     y_pred = self(batch_x)
 
                     loss = self.criterion(y_pred, batch_y)    
                     loss.backward()
-                    for a in range(self.args.number_of_diff_lrs):
+                    for a in range(len(self.optimizer)):
                         self.optimizer[a].step()
-                    for a in range(self.args.number_of_diff_lrs):
+                    for a in range(len(self.scheduler)):
                         self.scheduler[a].step()                              
 
                 wandb.log({"loss": loss.item() })

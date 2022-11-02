@@ -50,7 +50,10 @@ class StochLineSearchBase(torch.optim.Optimizer):
                  reset_option=0,
                  line_search_fn="armijo"):
         params = list(params)
-        super().__init__(params, {})
+        paramslist = []
+        for param in params:
+            paramslist = paramslist + param
+        super().__init__(paramslist, {})
 
         self.params = params
         self.c = c
@@ -72,7 +75,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
         # deterministic closure
         raise RuntimeError("This function should not be called")
 
-    def line_search(self, step_size, params_current, grad_current, loss, closure_deterministic, grad_norm, non_parab_dec=None, precond=False):
+    def line_search(self,i, step_size, params_current, grad_current, loss, closure_deterministic, grad_norm, non_parab_dec=None, precond=False):
         with torch.no_grad():
 
             if isinstance(grad_norm, torch.Tensor):
@@ -89,7 +92,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
                 for e in range(100):
                     # try a prospective step
                     if precond:
-                        self.try_sgd_precond_update(self.params, step_size, params_current, grad_current, momentum=0.)
+                        self.try_sgd_precond_update(i,self.params[i], step_size, params_current, grad_current,  momentum=0.)
                     else:
                         try_sgd_update(self.params, step_size, params_current, grad_current)
 
@@ -110,7 +113,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
                 # if line search exceeds max_epochs
                 if found == 0:
                     step_size = torch.tensor(data=1e-6)
-                    try_sgd_update(self.params, 1e-6, params_current, grad_current)
+                    try_sgd_update(self.params[i], 1e-6, params_current, grad_current)
 
                 self.state['backtracks'] += e
                 self.state['f_eval'].append(e)
@@ -154,16 +157,18 @@ class StochLineSearchBase(torch.optim.Optimizer):
 
         return step_size
 
-    def save_state(self, step_size, loss, loss_next, grad_norm):
-        if isinstance(step_size, torch.Tensor):
-            step_size = step_size.item()
-        self.state['step_size'] = step_size
+    def save_state(self, step_sizes, loss, loss_next, grad_norm):
+        if isinstance(step_sizes[0], torch.Tensor):
+            step_sizes = [step_size.item() for step_size in step_sizes]
+            #step_size = step_size.item()
+     #   self.state['step_size'] = step_size
+        self.state['step_sizes'] = step_sizes
         self.state['step'] += 1
-        self.state['all_step_size'].append(step_size)
+        self.state['all_step_size'].append(step_sizes)
         self.state['all_losses'].append(loss.item())
         self.state['all_new_losses'].append(loss_next.item())
         self.state['n_batches'] += 1
-        self.state['avg_step'] += step_size
+     #   self.state['avg_step'] += step_sizes
         if isinstance(grad_norm, torch.Tensor):
             grad_norm = grad_norm.item()
         self.state['grad_norm'].append(grad_norm)
