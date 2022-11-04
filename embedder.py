@@ -51,15 +51,17 @@ class NLP_embedder(nn.Module):
         self.num_classes = num_classes
         self.lasthiddenstate = 0
         self.args = args
-        from transformers import BertTokenizer, BertForMaskedLM
-        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-        self.model = BertModel.from_pretrained('bert-base-uncased')
-        self.output_length = 768
- 
-#         from transformers import RobertaTokenizer, RobertaModel
-#         self.tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
-#         self.model = RobertaModel.from_pretrained('roberta-base')
-#         self.output_length = 768
+
+        if args.model == "bert":
+            from transformers import BertTokenizer, BertForMaskedLM
+            self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+            self.model = BertModel.from_pretrained('bert-base-uncased')
+            self.output_length = 768
+        if args.model == "roberta":
+            from transformers import RobertaTokenizer, RobertaModel
+            self.tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
+            self.model = RobertaModel.from_pretrained('roberta-base')
+            self.output_length = 768
 
         
         self.fc1 = nn.Linear(self.output_length,self.num_classes)
@@ -168,20 +170,18 @@ class NLP_embedder(nn.Module):
                     for a in range(len(self.scheduler)):
                         self.scheduler[a].step()                              
 
-                wandb.log({"loss": loss.item() })
-                    # "steps_size_plot" : wandb.plot.line_series(
-                    # xs=[i for i in range(len(self.optimizer))],
-                    # ys=[opt.state['step_size'] for opt in self.optimizer],
-                    # keys=["layer"+str(a) for a in range(len(self.optimizer))],
-                    # title="Evolution of step size by layer",
-                    # xname="steps")})
-                
-                # "step_size": [opt.state["step_size"] for opt in self.optimizer]})
+                dict = {"loss": loss.item() }
+                if self.args.opts["opt"] == "adamsls":
+                   for a,step_size in enumerate( self.optimizer[0].state['step_sizes']):
+                        dict["step_size"+str(a)] = step_size
+                else:
+                    for a,scheduler in enumerate( self.scheduler):
+                        dict["step_size"+str(a)] = scheduler.get_last_lr()[0]
+                  #      print(dict["step_size"+str(a)])
+                wandb.log(dict)
                 accloss = accloss + loss.item()
                 accsteps += 1
                 if i % np.max((1,int((len(x)/self.batch_size)*0.1))) == 0:
-                 #   wandb.log({"loss": accloss / accsteps})
-                  #  wandb.log({"lr": self.optimizer[].get_last_lr()[0]})
                     print(i, accloss/ accsteps)
                     accsteps = 0
                     accloss = 0

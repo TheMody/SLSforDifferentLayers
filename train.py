@@ -48,6 +48,7 @@ def train(args, config):
     args.number_of_diff_lrs = int(config["DEFAULT"]["num_diff_opt"])
     args.opts = {"lr": lr, "opt": optimizer}
     args.ds = dataset
+    args.model = config["DEFAULT"]["model"]
     num_classes = 2
     if "mnli" in dataset:
         num_classes = 3

@@ -10,7 +10,7 @@ class AdamSLS(StochLineSearchBase):
     def __init__(self,
                  params,
                  n_batches_per_epoch=500,
-                 init_step_size=0.00001,
+                 init_step_size=0.0001,
                  c=0.1,
                  gamma=2.0,
                  beta=0.999,
@@ -24,6 +24,7 @@ class AdamSLS(StochLineSearchBase):
                  beta_b=0.9,
                  beta_f=2.0,
                  reset_option=1,
+                 first_step = True,
                  line_search_fn="armijo"):
         params = list(params)
         super().__init__(params,
@@ -58,6 +59,7 @@ class AdamSLS(StochLineSearchBase):
 
         self.momentum = momentum
         self.beta = beta
+        self.first_step = first_step
         # self.state['step_size'] = init_step_size
 
         self.clip_grad = clip_grad
@@ -82,13 +84,15 @@ class AdamSLS(StochLineSearchBase):
     def step(self, closure):
         # deterministic closure
         seed = time.time()
+        start = time.time()
         def closure_deterministic():
             with random_seed_torch(int(seed)):
                 return closure()
 
         loss = closure_deterministic()
         loss.backward()
-
+        # print("time for backwards:", time.time()-start)
+        # start = time.time()
         if self.clip_grad:
             torch.nn.utils.clip_grad_norm_(self.params, 0.25)
         # increment # forward-backward calls
@@ -104,9 +108,12 @@ class AdamSLS(StochLineSearchBase):
         # not_None_pos = [i for i,g in enumerate(grad_current) if not g == None]
         # grad_current = [grad_current[i] for i in not_None_pos]
         # self.params = [self.params[i] for i in not_None_pos]
-        
+        # print("time for copies:", time.time()-start)
+        # start = time.time()
 
         grad_norm = [compute_grad_norm(grad) for grad in grad_current]
+        # print("time for grad norm:", time.time()-start)
+        # start = time.time()
         #  Gv options
         # =============
         if self.gv_option in ['scalar']:
@@ -136,6 +143,8 @@ class AdamSLS(StochLineSearchBase):
                     else:
                         raise ValueError('%s does not exist' % self.base_opt)
 
+        # print("time for gv and mv calcs:", time.time()-start)
+        # start = time.time()
         pp_norm, pp_norms = self.get_pp_norm(grad_current=allgrad_current)
         step_sizes = self.state.get('step_sizes') or self.init_step_sizes
         step_sizes = [self.reset_step(step_size=step_size,
@@ -143,6 +152,8 @@ class AdamSLS(StochLineSearchBase):
                                     gamma=self.gamma,
                                     reset_option=self.reset_option,
                                     init_step_size=self.init_step_size) for step_size in step_sizes]
+        # print("time for ppnorm:", time.time()-start)
+        # start = time.time()
 
         # compute step size
         # =================
@@ -152,14 +163,29 @@ class AdamSLS(StochLineSearchBase):
             step_size, loss_next = self.line_search(orig_step, params_current, grad_current, loss, closure_deterministic, grad_norm)
             try_sgd_update(self.params, step_size, params_current, grad_current)
         else:
-            for i,step_size in enumerate(step_sizes):
-                if self.strategy == "cycle":
-                    if i == self.nextcycle:
-                        step_size, loss_next = self.line_search(i,step_size, params_current[i], grad_current[i], loss, closure_deterministic, grad_norm[i], non_parab_dec=pp_norm, precond=True)
-                self.try_sgd_precond_update(i,self.params[i], step_size, params_current[i], grad_current[i], momentum=self.momentum)
-            self.nextcycle += 1
-            if self.nextcycle >= len(self.params):
-                self.nextcycle = 0
+            if self.first_step:
+                for i,step_size in enumerate(step_sizes):
+                    step_size, loss_next = self.line_search(i,step_size, params_current[i], grad_current[i], loss, closure_deterministic, grad_norm[i], non_parab_dec=pp_norm, precond=True)
+                    step_sizes[i] = step_size
+                for i,step_size in enumerate(step_sizes):
+                    self.try_sgd_precond_update(i,self.params[i], step_size, params_current[i], grad_current[i], momentum=self.momentum)
+                self.first_step = False
+            else:
+                for i,step_size in enumerate(step_sizes):
+                    if self.strategy == "cycle":
+                        if i == self.nextcycle:
+                            # start = time.time()
+                            step_size, loss_next = self.line_search(i,step_size, params_current[i], grad_current[i], loss, closure_deterministic, grad_norm[i], non_parab_dec=pp_norm, precond=True)
+                            step_sizes[i] = step_size
+                            # print("time for line search:", time.time()-start)
+                            # start = time.time()
+                    # start = time.time()
+                    self.try_sgd_precond_update(i,self.params[i], step_size, params_current[i], grad_current[i], momentum=self.momentum)
+                    # print("time for sgd update:", time.time()-start)
+                    # start = time.time()
+                self.nextcycle += 1
+                if self.nextcycle >= len(self.params):
+                    self.nextcycle = 0
         self.save_state(step_sizes, loss, loss_next, grad_norm)
 
         # # compute gv stats

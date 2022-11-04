@@ -20,6 +20,7 @@ def random_seed_torch(seed, device=0):
         if torch.cuda.is_available():
             torch.cuda.set_rng_state(gpu_rng_state, device)
 
+#seems pretty slow like 0.1secs per iteration
 def compute_grad_norm(grad_list):
     grad_norm = 0.
     for g in grad_list:
@@ -158,8 +159,8 @@ class StochLineSearchBase(torch.optim.Optimizer):
         return step_size
 
     def save_state(self, step_sizes, loss, loss_next, grad_norm):
-        if isinstance(step_sizes[0], torch.Tensor):
-            step_sizes = [step_size.item() for step_size in step_sizes]
+       # if isinstance(step_sizes[0], torch.Tensor):
+        step_sizes = [step_size.item() if isinstance(step_size, torch.Tensor) else step_size for step_size in step_sizes]
             #step_size = step_size.item()
      #   self.state['step_size'] = step_size
         self.state['step_sizes'] = step_sizes

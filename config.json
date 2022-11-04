@@ -7,3 +7,4 @@ epochs = 5
 dataset = mrpc
 optim = adamsls
 num_diff_opt = 10
+model = roberta
