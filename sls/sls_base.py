@@ -113,8 +113,8 @@ class StochLineSearchBase(torch.optim.Optimizer):
                    
                 # if line search exceeds max_epochs
                 if found == 0:
-                    step_size = torch.tensor(data=1e-6)
-                    try_sgd_update(self.params[i], 1e-6, params_current, grad_current)
+                   # step_size = torch.tensor(data=1e-10)
+                    try_sgd_update(self.params[i], 1e-10, params_current, grad_current)
 
                 self.state['backtracks'] += e
                 self.state['f_eval'].append(e)

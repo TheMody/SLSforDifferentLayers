@@ -1,5 +1,5 @@
 First Results:
-
+BERT:
 MRPC:(5 epochs) accuracy, time per epoch
 1 adam: 0.811 time 30
 1 adamSLS: 0.823 time 50 
@@ -20,8 +20,21 @@ MNLI:(3 epochs)
 10 adamSLS: 0.7966 time 41226
 10adamSLS with cycle: 0.829 time 5400
 
+ROBERTA:
+SST2:
+1 adamsls: 0.9403669238090515 time per epoch 528.9592506885529
+10 adamsls: 0.939220130443573 time per epoch 750.0322439670563
+1 adam: 0.9426605105400085 time per epoch 282.04767751693726
+
+MRPC: 
+10 adamsls: 0.6838235259056091 time per epoch 75.30345869064331
+1 adam: 0.9166666865348816 time per epoch 28.758212089538574
+1 adamsls: 
+
+MNLI:
+1 adamsls: 0.8510442972183228 time per epoch 5259.462304830551
+10 adamsls: 0.8646969199180603 time per epoch 5173.936807394028
+1 adam: 0.8705043196678162 time per epoch 3241.9469165802
 
 
-
-Notes: 10 different adam as a sanity check
 

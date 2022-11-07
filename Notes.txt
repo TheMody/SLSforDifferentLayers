@@ -1,6 +1,6 @@
 Notes: 
-10 different adam as a sanity check -> done
 try sgd 
 try sgdsls
-modify adamSLS to work with just one backwards pass and only update step size on a single layer at a time every step done
 do an initial step on all the lrs and only then let them evolve seperately -> done but kinda ugly right now
+does the criterion i.e. make sense for only a part of the network?
+
