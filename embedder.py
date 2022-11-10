@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader
 from data import load_wiki
 import os
 from sls.adam_sls import AdamSLS
+from sls.sgd_sls import SgdSLS
 import wandb
 logging.set_verbosity_error()
 
@@ -69,49 +70,82 @@ class NLP_embedder(nn.Module):
         
 
         self.optimizer =[]
-        if args.number_of_diff_lrs > 1:
-            pparamalist = []
-            for i in range(args.number_of_diff_lrs):
-                paramlist = []
-                optrangelower = math.ceil((12.0/(args.number_of_diff_lrs-2)) *(i-1))
-                optrangeupper = math.ceil((12.0/(args.number_of_diff_lrs-2)) * (i))
-                
-                optrange = list(range(optrangelower,optrangeupper))
-                if i == 0 or i == args.number_of_diff_lrs-1:
-                    optrange =[]
-                for name,param in self.named_parameters():
-                #  print(i,paramlist)  
-                    if "encoder.layer." in name:
-                        included = False
-                        for number in optrange:
-                            if "." +str(number)+"." in name:
-                                included = True
-                        if included:
-                            paramlist.append(param)
-                         #   print("included", name , "in", i)
-                    else:
-                        if "embeddings." in name:
-                            if i == 0:
+        if args.split_by == "layer":
+            if args.number_of_diff_lrs > 1:
+                pparamalist = []
+                for i in range(args.number_of_diff_lrs):
+                    paramlist = []
+                    optrangelower = math.ceil((12.0/(args.number_of_diff_lrs-2)) *(i-1))
+                    optrangeupper = math.ceil((12.0/(args.number_of_diff_lrs-2)) * (i))
+                    
+                    optrange = list(range(optrangelower,optrangeupper))
+                    if i == 0 or i == args.number_of_diff_lrs-1:
+                        optrange =[]
+                    for name,param in self.named_parameters():
+                        if "encoder.layer." in name:
+                            included = False
+                            for number in optrange:
+                                if "." +str(number)+"." in name:
+                                    included = True
+                            if included:
                                 paramlist.append(param)
-                             #   print("included", name , "in", i)
+                              #  print("included", name , "in", i)
                         else:
-                            if i == args.number_of_diff_lrs-1 and not "pooler" in name:
-                                paramlist.append(param)
-                            #    print("included", name , "in", i)
-                             #   print(name, param.requires_grad, param.grad)
-                if args.opts["opt"] == "adam":    
-                    self.optimizer.append(optim.Adam(paramlist, lr=args.opts["lr"] ))
+                            if "embeddings." in name:
+                                if i == 0:
+                                    paramlist.append(param)
+                                 #   print("included", name , "in", i)
+                            else:
+                                if i == args.number_of_diff_lrs-1 and not "pooler" in name:
+                                    paramlist.append(param)
+                                  #  print("included", name , "in", i)
+                                  #  print(name, param.requires_grad, param.grad)
+                    if args.opts["opt"] == "adam":    
+                        self.optimizer.append(optim.Adam(paramlist, lr=args.opts["lr"] ))
+                    if args.opts["opt"] == "sgd":    
+                        self.optimizer.append(optim.SGD(paramlist, lr=args.opts["lr"] ))
+                    if args.opts["opt"] == "adamsls"  or args.opts["opt"] == "sgdsls":  
+                        pparamalist.append(paramlist)
                 if args.opts["opt"] == "adamsls":  
-                    pparamalist.append(paramlist)
-            if args.opts["opt"] == "adamsls":  
-                self.optimizer.append(AdamSLS(pparamalist))
+                    self.optimizer.append(AdamSLS(pparamalist))
+                if args.opts["opt"] == "sgdsls":  
+                    self.optimizer.append(SgdSLS(pparamalist ))
+            else:
+                if args.opts["opt"] == "adam":    
+                    self.optimizer.append(optim.Adam(self.parameters(), lr=args.opts["lr"] ))
+                if args.opts["opt"] == "sgd":    
+                    self.optimizer.append(optim.SGD(self.parameters(), lr=args.opts["lr"] ))
+                if args.opts["opt"] == "adamsls":    
+                    self.optimizer.append(AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]]))
+                if args.opts["opt"] == "sgdsls":    
+                    self.optimizer.append(SgdSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]]))
         else:
+            querylist = []
+            keylist = []
+            valuelist = []
+            elselist = [] 
+            for name,param in self.named_parameters():
+                if not "pooler" in name:
+                    if "query" in name:
+                        querylist.append(param)
+                    else:
+                        if "key" in name:
+                            keylist.append(param)
+                        else:
+                            if "value" in name:
+                                valuelist.append(param)
+                            else:
+                                elselist.append(param)
             if args.opts["opt"] == "adam":    
                 self.optimizer.append(optim.Adam(self.parameters(), lr=args.opts["lr"] ))
             if args.opts["opt"] == "sgd":    
                 self.optimizer.append(optim.SGD(self.parameters(), lr=args.opts["lr"] ))
             if args.opts["opt"] == "adamsls":    
-                self.optimizer.append(AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]]))
+                self.optimizer.append(AdamSLS( [keylist,querylist,valuelist,elselist]))
+            if args.opts["opt"] == "sgdsls":    
+                self.optimizer.append(SgdSLS( [keylist,querylist,valuelist,elselist]))
+            
+
             
         
     def forward(self, x_in):
@@ -123,11 +157,12 @@ class NLP_embedder(nn.Module):
     
      
     def fit(self, x, y, epochs=1, X_val= None,Y_val= None):
-        wandb.init(project="SLSforDifferentLayers"+self.args.ds)
+        wandb.init(project="SLSforDifferentLayers"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
+        "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth)
         wandb.watch(self)
         
         
-        if not self.args.opts["opt"] == "adamsls":
+        if (not self.args.opts["opt"] == "adamsls") and (not self.args.opts["opt"] == "sgdsls"):
             self.scheduler =[]
             for i in range(len(self.optimizer)): 
                 self.scheduler.append(CosineWarmupScheduler(optimizer= self.optimizer[i], 
@@ -150,14 +185,14 @@ class NLP_embedder(nn.Module):
                 batch_y = batch_y.to(device)
                 batch_x = batch_x.to(device)
 
-                if self.args.opts["opt"] == "adamsls":
+                if self.args.opts["opt"] == "adamsls" or self.args.opts["opt"] == "sgdsls":
                     closure = lambda : self.criterion(self(batch_x), batch_y)
 
-                  #  for a in range(len(self.optimizer)):
-                    self.optimizer[0].zero_grad()
+                    for a in range(len(self.optimizer)):
+                        self.optimizer[a].zero_grad()
 
-                  #  for a in range(len(self.optimizer)):
-                    loss = self.optimizer[0].step(closure = closure)
+                    for a in range(len(self.optimizer)):
+                        loss = self.optimizer[a].step(closure = closure)
                 else:
                     for a in range(len(self.optimizer)):
                         self.optimizer[a].zero_grad()
@@ -171,13 +206,13 @@ class NLP_embedder(nn.Module):
                         self.scheduler[a].step()                              
 
                 dict = {"loss": loss.item() }
-                if self.args.opts["opt"] == "adamsls":
+                if self.args.opts["opt"] == "adamsls" or self.args.opts["opt"] == "sgdsls":
                    for a,step_size in enumerate( self.optimizer[0].state['step_sizes']):
                         dict["step_size"+str(a)] = step_size
                 else:
                     for a,scheduler in enumerate( self.scheduler):
                         dict["step_size"+str(a)] = scheduler.get_last_lr()[0]
-                  #      print(dict["step_size"+str(a)])
+                    #      print(dict["step_size"+str(a)])
                 wandb.log(dict)
                 accloss = accloss + loss.item()
                 accsteps += 1
@@ -196,7 +231,7 @@ class NLP_embedder(nn.Module):
                 
                 
 
-        return
+        return accuracy
         
     @torch.no_grad()
     def evaluate(self, X,Y):

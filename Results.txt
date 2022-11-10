@@ -18,7 +18,7 @@ MNLI:(3 epochs)
 1 adam: 0.8372898697853088 time 3315.035003423691
 1 adamSLS: 0.8356596827507019 time 5606.206659555435
 10 adamSLS: 0.7966 time 41226
-10adamSLS with cycle: 0.829 time 5400
+10 adamSLS with cycle: 0.829 time 5400
 
 ROBERTA:
 SST2:

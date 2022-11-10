@@ -38,6 +38,7 @@ def try_sgd_update(params, step_size, params_current, grad_current):
     zipped = zip(params, params_current, grad_current)
 
     for p_next, p_current, g_current in zipped:
+       # p_next.data[:] = p_current.data
         p_next.data = p_current - step_size * g_current
 
 class StochLineSearchBase(torch.optim.Optimizer):
@@ -79,6 +80,8 @@ class StochLineSearchBase(torch.optim.Optimizer):
     def line_search(self,i, step_size, params_current, grad_current, loss, closure_deterministic, grad_norm, non_parab_dec=None, precond=False):
         with torch.no_grad():
 
+            if isinstance(grad_norm, list):
+                grad_norm = compute_grad_norm(grad_norm)
             if isinstance(grad_norm, torch.Tensor):
                 grad_norm = grad_norm.item()
             if grad_norm >= 1e-8 and loss.item() != 0:
@@ -92,10 +95,16 @@ class StochLineSearchBase(torch.optim.Optimizer):
 
                 for e in range(100):
                     # try a prospective step
-                    if precond:
-                        self.try_sgd_precond_update(i,self.params[i], step_size, params_current, grad_current,  momentum=0.)
+                    if self.first_step:
+                        if precond:
+                            self.try_sgd_precond_update(i,self.params, step_size, params_current, grad_current,  momentum=0.)
+                        else:
+                            try_sgd_update(self.params, step_size, params_current, grad_current)
                     else:
-                        try_sgd_update(self.params, step_size, params_current, grad_current)
+                        if precond:
+                            self.try_sgd_precond_update(i,self.params[i], step_size, params_current, grad_current,  momentum=0.)
+                        else:
+                            try_sgd_update(self.params[i], step_size, params_current, grad_current)
 
                     # compute the loss at the next step; no need to compute gradients.
                     loss_next = closure_deterministic()
