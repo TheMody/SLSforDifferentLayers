@@ -177,6 +177,7 @@ class NLP_embedder(nn.Module):
         for e in range(epochs):
             start = time.time()
             for i in range(math.ceil(len(x) / self.batch_size)):
+                startsteptime = time.time()
                 ul = min((i+1) * self.batch_size, len(x))
                 batch_x = x[i*self.batch_size: ul]
                 batch_y = y[i*self.batch_size: ul]
@@ -205,7 +206,7 @@ class NLP_embedder(nn.Module):
                     for a in range(len(self.scheduler)):
                         self.scheduler[a].step()                              
 
-                dict = {"loss": loss.item() }
+                dict = {"loss": loss.item() , "time_per_step":time.time()-startsteptime}
                 if self.args.opts["opt"] == "adamsls" or self.args.opts["opt"] == "sgdsls":
                    for a,step_size in enumerate( self.optimizer[0].state['step_sizes']):
                         dict["step_size"+str(a)] = step_size
@@ -230,7 +231,7 @@ class NLP_embedder(nn.Module):
                 print("epoch",e,"time per epoch", time.time()-start)
                 
                 
-
+        wandb.finish()
         return accuracy
         
     @torch.no_grad()

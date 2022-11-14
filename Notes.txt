@@ -1,9 +1,7 @@
 Notes: 
 think of different critertions which part of the network to update(maybe highest grad norm or smthn)
 does the armijo criterion i.e. make sense for only a part of the network? maybe use the loss of the subnetwork (i.e. the gradient?) maybe by integrating the gradient on the input part of the subnetwork
-seperate the network differently? (by key, query, value, mlp part) -> done needs to be tested now
 understand complexity and see what it relates to in a transformer
 SLS + SAM on the network
-partial step should also do the step for the rest of the network just with normal step size.
 try 10 adamsls on transformer pre-training
 maybe try radam instead of adam

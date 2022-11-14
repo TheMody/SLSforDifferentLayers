@@ -8,20 +8,24 @@ import sys
 from train import train
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-def main():
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    
-    parser.add_argument('--config_file', help='path_to_config_file', type=str, default="config.json")
-    # parser.add_argument('--optimizer', help='optimizer to use either adam or adamsls', type=str, default="adam")
-    # parser.add_argument('--dataset', help='dataset to use either mrpc, s', type=str, default="adam")
-    # parser.add_argument('--num_diff_opt', help='number of layers to optimize', type=int, default=1)
+def main(config_file = None):
+    if config_file == None:
+        parser = argparse.ArgumentParser(
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        
+        parser.add_argument('--config_file', help='path_to_config_file', type=str, default="config.json")
+        # parser.add_argument('--optimizer', help='optimizer to use either adam or adamsls', type=str, default="adam")
+        # parser.add_argument('--dataset', help='dataset to use either mrpc, s', type=str, default="adam")
+        # parser.add_argument('--num_diff_opt', help='number of layers to optimize', type=int, default=1)
 
-    args = parser.parse_args()
-
+        args = parser.parse_args()
+        config_file = args.config_file
+    else:
+        from argparse import Namespace
+        args = Namespace()
     config = configparser.ConfigParser()
     config.sections()
-    config.read(args.config_file)
+    config.read(config_file)
     if config["DEFAULT"]["directory"] == "default":
         config["DEFAULT"]["directory"] = "results/" + dt.datetime.now().strftime("%d.%m.%Y_%H.%M.%S")
     

@@ -163,6 +163,7 @@ class AdamSLS(StochLineSearchBase):
             if self.first_step:
                 step_size, loss_next = self.line_search(-1,step_sizes[0], params_current, grad_current, loss, closure_deterministic, grad_norm, non_parab_dec=pp_norm, precond=True)
                 step_sizes = [step_size for i in range(len(step_sizes))]
+                self.c  = self.c / len(step_sizes)
                 self.first_step = False
             else:
                 for i,step_size in enumerate(step_sizes):
