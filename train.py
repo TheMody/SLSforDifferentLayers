@@ -49,6 +49,7 @@ def train(args, config):
     args.opts = {"lr": lr, "opt": optimizer}
     args.ds = dataset
     args.split_by = config["DEFAULT"]["split_by"]
+    args.update_rule = config["DEFAULT"]["update_rule"]
     args.model = config["DEFAULT"]["model"]
     args.savepth = config["DEFAULT"]["directory"]
     num_classes = 2

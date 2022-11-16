@@ -24,6 +24,7 @@ class AdamSLS(StochLineSearchBase):
                  beta_b=0.9,
                  beta_f=2.0,
                  reset_option=1,
+                 timescale = 0.05,
                  first_step = True,
                  line_search_fn="armijo"):
         params = list(params)
@@ -57,9 +58,15 @@ class AdamSLS(StochLineSearchBase):
         if self.mom_type == 'heavy_ball':
             self.params_prev = copy.deepcopy(params) 
 
+        if self.strategy == "impact_mag":
+            self.time_since_last_update = [0 for i in range(len(params))]
+            self.importance = [0.0001 for i in range(len(params))]
+            self.steps_taken = [0 for i in range(len(params))]
+
         self.momentum = momentum
         self.beta = beta
         self.first_step = first_step
+        self.timescale = timescale
         # self.state['step_size'] = init_step_size
 
         self.clip_grad = clip_grad
@@ -163,10 +170,25 @@ class AdamSLS(StochLineSearchBase):
             if self.first_step:
                 step_size, loss_next = self.line_search(-1,step_sizes[0], params_current, grad_current, loss, closure_deterministic, grad_norm, non_parab_dec=pp_norm, precond=True)
                 step_sizes = [step_size for i in range(len(step_sizes))]
-                self.c  = self.c / len(step_sizes)
+          #      self.c  = self.c / len(step_sizes)
                 self.first_step = False
             else:
+                if self.strategy == "impact_mag":
+                    probabilities= [(2**(self.time_since_last_update[i]*self.timescale))*0.2 +self.importance[i]/np.sum(self.importance) for i in range(len(step_sizes))]
+                    probabilities = [p/np.sum(probabilities) for p in probabilities]
+                  #  print(probabilities)
+                    rand = np.random.choice([a for a in range(len(step_sizes))], p = probabilities)
                 for i,step_size in enumerate(step_sizes):
+                    if self.strategy == "impact_mag":
+                        if rand == i:
+                            step_size, loss_next = self.line_search(i,step_size, params_current[i], grad_current[i], loss, closure_deterministic, grad_norm[i], non_parab_dec=pp_norm, precond=True)
+                            step_sizes[i] = step_size
+                            self.importance[i] = (loss.item() - loss_next.item())*(1-self.momentum) + self.importance[i]*self.momentum
+                            self.time_since_last_update[i] = 0
+                        else:
+                            self.try_sgd_precond_update(i,self.params[i], step_size, params_current[i], grad_current[i], self.momentum)
+                            self.time_since_last_update[i] += 1
+                        
                     if self.strategy == "cycle":
                         if i == self.nextcycle:
                             step_size, loss_next = self.line_search(i,step_size, params_current[i], grad_current[i], loss, closure_deterministic, grad_norm[i], non_parab_dec=pp_norm, precond=True)
