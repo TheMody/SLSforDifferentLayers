@@ -14,6 +14,7 @@ def main(config_file = None):
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         
         parser.add_argument('--config_file', help='path_to_config_file', type=str, default="config.json")
+        parser.add_argument('--train_type', help='cls or mlm', type=str, default="cls")
         # parser.add_argument('--optimizer', help='optimizer to use either adam or adamsls', type=str, default="adam")
         # parser.add_argument('--dataset', help='dataset to use either mrpc, s', type=str, default="adam")
         # parser.add_argument('--num_diff_opt', help='number of layers to optimize', type=int, default=1)
@@ -23,6 +24,7 @@ def main(config_file = None):
     else:
         from argparse import Namespace
         args = Namespace()
+        args.train_type = "cls"
     config = configparser.ConfigParser()
     config.sections()
     config.read(config_file)

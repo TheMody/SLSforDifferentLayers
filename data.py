@@ -199,6 +199,22 @@ def load_wiki():
     X = [str(e["text"].numpy()) for e in data]
     return X
 
+def load_wikiandbook(batch_size):
+    from datasets import concatenate_datasets, load_dataset
+
+    bookcorpus = load_dataset("bookcorpus", split="train")
+    wiki = load_dataset("wikipedia", "20220301.en", split="train")
+    wiki = wiki.remove_columns([col for col in wiki.column_names if col != "text"])  # only keep the 'text' column
+
+    assert bookcorpus.features.type == wiki.features.type
+    raw_datasets = concatenate_datasets([bookcorpus, wiki]) #ds is 5.000.000 *16 examples big
+    def batch_iterator(batch_size=batch_size):
+        while True:
+            for i in range(0, len(raw_datasets), batch_size):
+                yield raw_datasets[i : i + batch_size]["text"]
+
+    return batch_iterator()
+
 
 from torch.utils.data import Dataset
 

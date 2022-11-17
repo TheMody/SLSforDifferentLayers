@@ -60,7 +60,7 @@ class AdamSLS(StochLineSearchBase):
 
         if self.strategy == "impact_mag":
             self.time_since_last_update = [0 for i in range(len(params))]
-            self.importance = [0.0001 for i in range(len(params))]
+            self.importance = [0.00001 for i in range(len(params))]
             self.steps_taken = [0 for i in range(len(params))]
 
         self.momentum = momentum
@@ -174,10 +174,13 @@ class AdamSLS(StochLineSearchBase):
                 self.first_step = False
             else:
                 if self.strategy == "impact_mag":
-                    probabilities= [(2**(self.time_since_last_update[i]*self.timescale))*0.2 +self.importance[i]/np.sum(self.importance) for i in range(len(step_sizes))]
+                    probabilities= [((2**(self.time_since_last_update[i]*self.timescale))  - 1)*0.2 +self.importance[i]/np.sum(self.importance) for i in range(len(step_sizes))]
                     probabilities = [p/np.sum(probabilities) for p in probabilities]
                   #  print(probabilities)
-                    rand = np.random.choice([a for a in range(len(step_sizes))], p = probabilities)
+                    try:
+                        rand = np.random.choice([a for a in range(len(step_sizes))], p = probabilities)
+                    except:
+                        rand = np.random.randint(len(step_sizes))
                 for i,step_size in enumerate(step_sizes):
                     if self.strategy == "impact_mag":
                         if rand == i:

@@ -15,7 +15,7 @@ from sklearn.model_selection import ShuffleSplit
 from sklearn.model_selection import cross_val_score
 from sklearn.cluster import KMeans
 import time
-from data import load_data, SimpleDataset, load_wiki
+from data import load_data, SimpleDataset, load_wiki, load_wikiandbook
 from torch.utils.data import DataLoader
 from plot import plot_TSNE_clustering
 # Fixing seed for reproducibility
@@ -27,7 +27,7 @@ ACTIVE_METRIC_NAME = 'accuracy'
 REWARD_ATTR_NAME = 'objective'
 datasets = [ "mnli","cola", "sst2", "mrpc","qqp", "rte"]#"qqp", "rte" 
 eval_ds = [ "rtesmall", "qqpsmall","qqp", "rte"]
-    
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
  
             
 
@@ -43,8 +43,6 @@ def train(args, config):
     print("dataset:", dataset)
     lr = 2e-5
 
-    
-    print("running baseline")
     args.number_of_diff_lrs = int(config["DEFAULT"]["num_diff_opt"])
     args.opts = {"lr": lr, "opt": optimizer}
     args.ds = dataset
@@ -56,14 +54,24 @@ def train(args, config):
     if "mnli" in dataset:
         num_classes = 3
 
-    print("loading model")
-    model = NLP_embedder(num_classes = num_classes,batch_size = batch_size,args =  args)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = model.to(device)
-    print("loading dataset")
-    X_train, X_val, X_test, Y_train, Y_val, Y_test = load_data(name=dataset)
-    print("training model on dataset", dataset)
-    model.fit(X_train, Y_train, epochs=max_epochs, X_val= X_val, Y_val = Y_val)
-    accuracy = model.evaluate(X_val,Y_val).item()
-    print("acuraccy on ds:", accuracy)
+    if args.train_type == "cls":
+        print("loading model")
+        model = NLP_embedder(num_classes = num_classes,batch_size = batch_size,args =  args)
+
+        model = model.to(device)
+        print("loading dataset")
+        X_train, X_val, X_test, Y_train, Y_val, Y_test = load_data(name=dataset)
+        print("training model on dataset", dataset)
+        model.fit(X_train, Y_train, epochs=max_epochs, X_val= X_val, Y_val = Y_val)
+        accuracy = model.evaluate(X_val,Y_val).item()
+        print("acuraccy on ds:", accuracy)
+
+    if args.train_type == "mlm":
+        from transformers import BertTokenizer
+        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        args.opts["lr"] = 1e-4
+        model = NLP_embedder(num_classes = tokenizer.vocab_size,batch_size = batch_size,args =  args).to(device)
+        print("loading dataset")
+        ds = load_wikiandbook(batch_size)
+        model.fitmlm(ds, 2000000, config["DEFAULT"]["directory"]+"/model.pt")
        

@@ -17,6 +17,7 @@ from sls.adam_sls import AdamSLS
 from sls.sgd_sls import SgdSLS
 import wandb
 logging.set_verbosity_error()
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class CosineWarmupScheduler(optim.lr_scheduler._LRScheduler):
@@ -43,7 +44,7 @@ class CosineWarmupScheduler(optim.lr_scheduler._LRScheduler):
 
 class NLP_embedder(nn.Module):
 
-    def __init__(self,  num_classes, batch_size, args):
+    def __init__(self,  num_classes, batch_size, args, mode = "mlm"):
         super(NLP_embedder, self).__init__()
         self.type = 'nn'
         self.batch_size = batch_size
@@ -52,6 +53,8 @@ class NLP_embedder(nn.Module):
         self.num_classes = num_classes
         self.lasthiddenstate = 0
         self.args = args
+        self.mode = mode
+        self.loss = nn.CrossEntropyLoss()
 
         if args.model == "bert":
             from transformers import BertTokenizer, BertForMaskedLM
@@ -150,7 +153,8 @@ class NLP_embedder(nn.Module):
         
     def forward(self, x_in):
         x = self.model(**x_in).last_hidden_state
-        x = x[:, self.lasthiddenstate]
+        if self.mode == "cls":
+            x = x[:, self.lasthiddenstate]
         x = self.fc1(x)
         return x
     
@@ -161,7 +165,7 @@ class NLP_embedder(nn.Module):
         "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth)
         wandb.watch(self)
         
-        
+        self.mode = "cls"
         if (not self.args.opts["opt"] == "adamsls") and (not self.args.opts["opt"] == "sgdsls"):
             self.scheduler =[]
             for i in range(len(self.optimizer)): 
@@ -242,6 +246,88 @@ class NLP_embedder(nn.Module):
         accuracy = torch.sum(Y == y_pred)
         accuracy = accuracy/Y.shape[0]
         return accuracy
+
+
+    def mask(self, input_ids, mask_token_id = 103):
+        # create random array of floats in equal dimension to input_ids
+        rand = torch.rand(input_ids.shape).to(device)
+        # where the random array is less than 0.15, we set true
+        mask_arr = (rand < 0.15) * (input_ids != 101) * (input_ids != 102)* (input_ids != 0)
+        mask_arr1 = (rand < 0.15*0.8)* (input_ids != 101) * (input_ids != 102)* (input_ids != 0) #* (mask_arr)
+        mask_arr2 = (0.15*0.8 < rand)* (rand < 0.15*0.9)* (input_ids != 101) * (input_ids != 102)* (input_ids != 0)
+      #  mask_arr3 = (0.15*0.9 < rand < 0.15)* (input_ids != 101) * (input_ids != 102)* (input_ids != 0) not needed since just nothing is done
+
+        input_ids = torch.where(mask_arr1, mask_token_id, input_ids)#80% normal masking
+        input_ids = torch.where(mask_arr2, (torch.rand(1, device = device)* self.tokenizer.vocab_size).long(), input_ids)#10% random token
+        #last 10% is just original token and does not need to be replaced
+        return input_ids, mask_arr
+    
+    def compute_mlm_loss(self,output,labels):
+        output = output.flatten(start_dim = 0, end_dim = 1)
+        labels = labels.flatten(start_dim = 0, end_dim = 1)
+        loss = self.loss(output, labels)
+        return loss
+
+    #todo test mlm results
+
+    def fitmlm(self,dataset, steps, checkpoint_pth = None):
+        if (not self.args.opts["opt"] == "adamsls") and (not self.args.opts["opt"] == "sgdsls"):
+            self.scheduler =[]
+            for i in range(len(self.optimizer)): 
+                self.scheduler.append(CosineWarmupScheduler(optimizer= self.optimizer[i], 
+                                                warmup = 3000 ,
+                                                    max_iters = steps))
+        wandb.init(project="mlmwithSLS", name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
+        "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth)
+        wandb.watch(self)
+        self.mode = "mlm"
+        accsteps = 0
+        accloss = 0
+        for i,data in enumerate(dataset):
+            startsteptime = time.time()
+            input = self.tokenizer(data, return_tensors="pt", padding=True, max_length = 256, truncation = True)
+            input = input.to(device)
+            labels = torch.clone(input["input_ids"])
+            input["input_ids"], mask = self.mask(input["input_ids"])
+            labels = torch.where(mask, labels, -100)
+
+            if self.args.opts["opt"] == "adamsls" or self.args.opts["opt"] == "sgdsls":
+                closure = lambda : self.compute_mlm_loss(self(input),labels)
+
+                for a in range(len(self.optimizer)):
+                    self.optimizer[a].zero_grad()
+
+                for a in range(len(self.optimizer)):
+                    loss = self.optimizer[a].step(closure = closure)
+            else:
+                for a in range(len(self.optimizer)):
+                    self.optimizer[a].zero_grad()
+
+                loss = self.compute_mlm_loss(self(input),labels)  
+                loss.backward()
+                for a in range(len(self.optimizer)):
+                    self.optimizer[a].step()
+                for a in range(len(self.scheduler)):
+                    self.scheduler[a].step()  
+
+            dict = {"loss": loss.item() , "time_per_step":time.time()-startsteptime}
+            if self.args.opts["opt"] == "adamsls" or self.args.opts["opt"] == "sgdsls":
+                for a,step_size in enumerate( self.optimizer[0].state['step_sizes']):
+                        dict["step_size"+str(a)] = step_size
+            else:
+                for a,scheduler in enumerate( self.scheduler):
+                    dict["step_size"+str(a)] = scheduler.get_last_lr()[0]
+            wandb.log(dict)
+            accloss = accloss + loss.item()
+            accsteps += 1
+            if i % 100 == 0:
+                print(i, accloss/ accsteps)
+                accsteps = 0
+                accloss = 0
+            if not checkpoint_pth == None and i % np.max((1,int(steps*0.1))) == 0:
+                torch.save(self, checkpoint_pth)
+            if i >= steps:
+                break
     
     def predict(self, x):
         resultx = None
