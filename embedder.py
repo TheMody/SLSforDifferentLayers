@@ -162,7 +162,8 @@ class NLP_embedder(nn.Module):
      
     def fit(self, x, y, epochs=1, X_val= None,Y_val= None):
         wandb.init(project="SLSforDifferentLayers"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
-        "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth)
+        "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth, entity="pkenneweg", 
+        group = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) )
         wandb.watch(self)
         
         self.mode = "cls"
