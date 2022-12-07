@@ -26,7 +26,8 @@ class AdamSLS(StochLineSearchBase):
                  reset_option=1,
                  timescale = 0.05,
                  first_step = True,
-                 line_search_fn="armijo"):
+                 line_search_fn="armijo",
+                 combine_threshold = 1e-9):
         params = list(params)
         super().__init__(params,
                          n_batches_per_epoch=n_batches_per_epoch,
@@ -47,6 +48,7 @@ class AdamSLS(StochLineSearchBase):
         self.beta_f = beta_f
         self.beta_b = beta_b
         self.reset_option = reset_option
+        self.combine_threshold = combine_threshold
 
         # others
         self.strategy = strategy
@@ -87,6 +89,19 @@ class AdamSLS(StochLineSearchBase):
             
             if self.base_opt == 'amsgrad':
                 self.state['gv_max'] = [[torch.zeros(p.shape).to(p.device) for p in params] for params in self.params]
+    def combine_parts(self,index1,index2):
+        if index2 < index1:
+            buffer = index1
+            index1 = index2
+            index2 = buffer
+        print("combining ", index1,index2)
+        self.state['gv'][index1] += self.state['gv'].pop(index2)
+        self.state['mv'][index1] += self.state['mv'].pop(index2)
+        self.params[index1] += self.params.pop(index2)
+        print(self.state['step_sizes'])
+        self.state['step_sizes'][index1] = (self.state['step_sizes'][index1] + self.state['step_sizes'].pop(index2)) / 2.0
+        self.init_step_sizes = [self.init_step_sizes[0] for i in range(len(self.params))]
+        
 
     def step(self, closure):
         # deterministic closure
@@ -201,8 +216,18 @@ class AdamSLS(StochLineSearchBase):
                 self.nextcycle += 1
                 if self.nextcycle >= len(self.params):
                     self.nextcycle = 0
-        self.save_state(step_sizes, loss, loss_next, grad_norm)
+        
 
+        
+
+                
+        self.save_state(step_sizes, loss, loss_next, grad_norm)
+        if len(step_sizes) > 1:
+            sortedarg = np.argsort(step_sizes)
+            if step_sizes[sortedarg[0]] < self.combine_threshold:
+                self.combine_parts(sortedarg[0], sortedarg[1])
+                if self.nextcycle >= len(self.params):
+                    self.nextcycle = 0
         if torch.isnan(self.params[0][0]).sum() > 0:
             raise ValueError('nans detected')
 

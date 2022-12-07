@@ -6,6 +6,7 @@ from logger import Logger
 import shutil
 import sys
 from train import train
+from train_img import train_img
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 def main(config_file = None):
@@ -41,6 +42,7 @@ def main(config_file = None):
             
     sys.stdout = Logger(open(config["DEFAULT"]["directory"] +"/SysOut.txt","w"))
     train(args, config)
+   # train_img(args, config)
     
 if __name__ == '__main__':
     main()

@@ -45,6 +45,7 @@ def train(args, config):
 
     args.number_of_diff_lrs = int(config["DEFAULT"]["num_diff_opt"])
     args.opts = {"lr": lr, "opt": optimizer}
+    args.combine = float(config["DEFAULT"]["combine"])
     args.ds = dataset
     args.split_by = config["DEFAULT"]["split_by"]
     args.update_rule = config["DEFAULT"]["update_rule"]
