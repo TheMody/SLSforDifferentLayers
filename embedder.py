@@ -95,7 +95,7 @@ class NLP_embedder(nn.Module):
                     if args.opts["opt"] == "adamsls"  or args.opts["opt"] == "sgdsls":  
                         pparamalist.append(paramlist)
                 if args.opts["opt"] == "adamsls":  
-                    self.optimizer.append(AdamSLS(pparamalist,strategy = args.update_rule ))
+                    self.optimizer.append(AdamSLS(pparamalist,strategy = args.update_rule , combine_threshold = args.combine))
                 if args.opts["opt"] == "sgdsls":  
                     self.optimizer.append(SgdSLS(pparamalist ))
             else:
@@ -104,7 +104,7 @@ class NLP_embedder(nn.Module):
                 if args.opts["opt"] == "sgd":    
                     self.optimizer.append(optim.SGD(self.parameters(), lr=args.opts["lr"] ))
                 if args.opts["opt"] == "adamsls":    
-                    self.optimizer.append(AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] ,strategy = args.update_rule))
+                    self.optimizer.append(AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] ,strategy = args.update_rule, combine_threshold = args.combine))
                 if args.opts["opt"] == "sgdsls":    
                     self.optimizer.append(SgdSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]]))
         else:

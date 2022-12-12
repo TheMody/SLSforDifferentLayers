@@ -23,7 +23,7 @@ def create_config(name, ds, split, n_opt, model, opt, update_r = "cycle", i = 0)
             f.write("model = " + model + "\n")
             f.write("split_by = " + split + "\n")
             f.write("update_rule = " + update_r + "\n")
-            f.write("combine = " + str(1e-8) + "\n")
+            f.write("combine = " + str(1e-9) + "\n")
    # print("results/"  +ds + opt+ str(n_opt) + model + split )
     main(name)
 

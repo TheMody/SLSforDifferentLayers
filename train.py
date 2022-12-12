@@ -17,7 +17,6 @@ from sklearn.cluster import KMeans
 import time
 from data import load_data, SimpleDataset, load_wiki, load_wikiandbook
 from torch.utils.data import DataLoader
-from plot import plot_TSNE_clustering
 # Fixing seed for reproducibility
 SEED = 999
 random.seed(SEED)

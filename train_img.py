@@ -18,6 +18,7 @@ def train_img(args,config):
     args.update_rule = config["DEFAULT"]["update_rule"]
     args.model = config["DEFAULT"]["model"]
     args.savepth = config["DEFAULT"]["directory"]
+    args.combine = float(config["DEFAULT"]["combine"])
 
 
     dataset = load_dataset("cifar100")
