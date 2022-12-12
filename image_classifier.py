@@ -75,7 +75,7 @@ class Image_classifier(nn.Module):
                 if args.opts["opt"] == "adamsls"  or args.opts["opt"] == "sgdsls":  
                     pparamalist.append(paramlist)
             if args.opts["opt"] == "adamsls":  
-                self.optimizer.append(AdamSLS(pparamalist,strategy = args.update_rule ))
+                self.optimizer.append(AdamSLS(pparamalist,strategy = args.update_rule , combine_threshold = args.combine))
             if args.opts["opt"] == "sgdsls":  
                 self.optimizer.append(SgdSLS(pparamalist ))
         else:
@@ -84,7 +84,7 @@ class Image_classifier(nn.Module):
             if args.opts["opt"] == "sgd":    
                 self.optimizer.append(optim.SGD(self.parameters(), lr=args.opts["lr"] ))
             if args.opts["opt"] == "adamsls":    
-                self.optimizer.append(AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] ,strategy = args.update_rule))
+                self.optimizer.append(AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] ,strategy = args.update_rule, combine_threshold = args.combine))
             if args.opts["opt"] == "sgdsls":    
                 self.optimizer.append(SgdSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]]))
 
@@ -156,9 +156,9 @@ class Image_classifier(nn.Module):
                 print(index, accloss/ accsteps)
                 accsteps = 0
                 accloss = 0
-                if not eval_ds == None:
-                    accuracy = self.evaluate(eval_ds)
-                    wandb.log({"accuracy": accuracy})
+            if not eval_ds == None:
+                accuracy = self.evaluate(eval_ds)
+                wandb.log({"accuracy": accuracy})
 
 
     @torch.no_grad()
@@ -170,7 +170,7 @@ class Image_classifier(nn.Module):
             batch_y = torch.LongTensor(data[i:i+self.batch_size]["fine_label"]).to(device)
             batch_x = self.feature_extractor(batch_x, return_tensors="pt").to(device)
             batch_x = self(batch_x)
-            y_pred = torch.argmax(batch_x, dim = 1),
+            y_pred = torch.argmax(batch_x, dim = 1)
             accuracy = torch.sum(batch_y == y_pred)
             acc += accuracy
         
