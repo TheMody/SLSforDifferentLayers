@@ -6,7 +6,7 @@ from logger import Logger
 import shutil
 import sys
 from train import train
-from train_img import train_img
+#from train_img import train_img
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 def main(config_file = None):

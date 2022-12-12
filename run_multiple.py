@@ -1,9 +1,9 @@
 
 from main import main
 
-datasets = ["sst2", "qnli", "mrpc", "mnli"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall","sst2","mrpc" ,"cola", "qnli","mnli"]#[ ]#,"mnli"]
+datasets = [ "mnli"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall","sst2","mrpc" ,"cola", "qnli","mnli"]#[ ]#,"mnli"]
 split_by = ["layer", "qkv"]#"layer","qkv",
-n_opts = [1,10]
+n_opts = [10]
 models = ["bert"]#, "roberta"]
 update_rule = ["cycle"] #, "impact_mag"]#"cycle", 
 optim = ["adamsls", "adam"]#, "sgd", "sgdsls"]"adam", 
