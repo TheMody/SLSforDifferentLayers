@@ -14,7 +14,6 @@ from torch.utils.data import DataLoader
 from data import load_wiki
 import os
 from sls.adam_sls import AdamSLS
-from sls.sgd_sls import SgdSLS
 import wandb
 from cosine_scheduler import CosineWarmupScheduler
 logging.set_verbosity_error()
@@ -97,7 +96,8 @@ class NLP_embedder(nn.Module):
                 if args.opts["opt"] == "adamsls":  
                     self.optimizer.append(AdamSLS(pparamalist,strategy = args.update_rule , combine_threshold = args.combine))
                 if args.opts["opt"] == "sgdsls":  
-                    self.optimizer.append(SgdSLS(pparamalist ))
+                    self.optimizer.append(AdamSLS( pparamalist,strategy = args.update_rule, combine_threshold = args.combine, base_opt = "scalar",gv_option = "scalar" ))
+                 #   self.optimizer.append(SgdSLS(pparamalist ))
             else:
                 if args.opts["opt"] == "adam":    
                     self.optimizer.append(optim.Adam(self.parameters(), lr=args.opts["lr"] ))
@@ -106,7 +106,7 @@ class NLP_embedder(nn.Module):
                 if args.opts["opt"] == "adamsls":    
                     self.optimizer.append(AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] ,strategy = args.update_rule, combine_threshold = args.combine))
                 if args.opts["opt"] == "sgdsls":    
-                    self.optimizer.append(SgdSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]]))
+                    self.optimizer.append(AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]],strategy = args.update_rule, combine_threshold = args.combine, base_opt = "scalar",gv_option = "scalar" ))
         else:
             querylist = []
             keylist = []
@@ -131,7 +131,7 @@ class NLP_embedder(nn.Module):
             if args.opts["opt"] == "adamsls":    
                 self.optimizer.append(AdamSLS( [keylist,querylist,valuelist,elselist],strategy = args.update_rule, combine_threshold = args.combine))
             if args.opts["opt"] == "sgdsls":    
-                self.optimizer.append(SgdSLS( [keylist,querylist,valuelist,elselist]))
+                self.optimizer.append(AdamSLS([keylist,querylist,valuelist,elselist]),strategy = args.update_rule, combine_threshold = args.combine, base_opt = "scalar",gv_option = "scalar" )
             
 
             
@@ -196,7 +196,7 @@ class NLP_embedder(nn.Module):
                     for a in range(len(self.scheduler)):
                         self.scheduler[a].step()                              
 
-                dict = {"loss": loss.item() , "time_per_step":time.time()-startsteptime}
+                dict = {"loss": loss.item() , "time_per_step":time.time()-startsteptime}#, "backtracks": np.sum(self.optimizer[a].state['n_backtr'][-1] for a in range(len(self.optimizer)))}
                 if self.args.opts["opt"] == "adamsls" or self.args.opts["opt"] == "sgdsls":
                    for a,step_size in enumerate( self.optimizer[0].state['step_sizes']):
                         dict["step_size"+str(a)] = step_size

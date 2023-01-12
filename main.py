@@ -41,8 +41,8 @@ def main(config_file = None):
             shutil.copy2(file, config["DEFAULT"]["directory"] )
             
     sys.stdout = Logger(open(config["DEFAULT"]["directory"] +"/SysOut.txt","w"))
-   # train(args, config)
-    train_img(args, config)
+    train(args, config)
+  #  train_img(args, config)
     
 if __name__ == '__main__':
     main()

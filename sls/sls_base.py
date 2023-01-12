@@ -66,7 +66,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
         self.line_search_fn = line_search_fn
         self.state['step'] = 0
         self.state['n_forwards'] = 0
-        self.state['n_backwards'] = 0
+       # self.state['n_backwards'] = []
         self.state['n_backtr'] = []
         self.budget = 0
         self.reset_option = reset_option
@@ -88,7 +88,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
                 # check if condition is satisfied
                 found = 0
 
-                if non_parab_dec is not None:
+                if non_parab_dec is not None: #and not self.base_opt == "scalar":
                     suff_dec = non_parab_dec
                 else:
                     suff_dec = grad_norm**2
@@ -110,6 +110,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
                     loss_next = closure_deterministic()
                     self.state['n_forwards'] += 1
 
+
                     if self.line_search_fn == "armijo":
                         found, step_size = self.check_armijo_conditions(step_size=step_size,
                                                                         loss=loss,
@@ -119,7 +120,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
                                                                         beta_b=self.beta_b)
                     if found == 1:
                         break
-                   
+              #  self.backtracks  = e
                 # if line search exceeds max_epochs
                 if found == 0:
                    # step_size = torch.tensor(data=1e-10)

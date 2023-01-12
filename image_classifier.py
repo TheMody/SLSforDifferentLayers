@@ -13,7 +13,6 @@ from torch.autograd import variable
 from torch.utils.data import DataLoader
 from data import load_wiki
 from sls.adam_sls import AdamSLS
-from sls.sgd_sls import SgdSLS
 import wandb
 from cosine_scheduler import CosineWarmupScheduler
 
