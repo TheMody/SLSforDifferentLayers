@@ -1,7 +1,7 @@
 import torch
 import contextlib
 import numpy as np
-
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 @contextlib.contextmanager
 def random_seed_torch(seed, device=0):
     cpu_rng_state = torch.get_rng_state()
@@ -22,11 +22,12 @@ def random_seed_torch(seed, device=0):
 
 #seems pretty slow like 0.1secs per iteration
 def compute_grad_norm(grad_list):
-    grad_norm = 0.
+    grad_norm = torch.zeros(1, device=device)# 0.
     for g in grad_list:
         if g is None:
             continue
         grad_norm += torch.sum(torch.mul(g, g))
+   # print(grad_norm)
     grad_norm = torch.sqrt(grad_norm)
     return grad_norm
 
@@ -136,7 +137,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
                     self.state['numerical_error'] += 1
                 if grad_norm == 0:
                     self.state["zero_steps"] += 1
-                step_size = 0
+                #step_size = 0
                 loss_next = closure_deterministic()
 
         return step_size, loss_next

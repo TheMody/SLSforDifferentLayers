@@ -91,10 +91,10 @@ class AdamSLS(StochLineSearchBase):
             index1 = index2
             index2 = buffer
         print("combining ", index1,index2)
+        print(self.state['step_sizes'])
         self.state['gv'][index1] += self.state['gv'].pop(index2)
         self.state['mv'][index1] += self.state['mv'].pop(index2)
         self.params[index1] += self.params.pop(index2)
-        print(self.state['step_sizes'])
         self.state['step_sizes'][index1] = (self.state['step_sizes'][index1] + self.state['step_sizes'].pop(index2)) / 2.0
         self.init_step_sizes = [self.init_step_sizes[0] for i in range(len(self.params))]
         
@@ -202,9 +202,10 @@ class AdamSLS(StochLineSearchBase):
         self.save_state(step_sizes, loss, loss_next, grad_norm)
 
         if not self.combine_threshold == 0:
-            if len(step_sizes) > 1:
+            if len(step_sizes) > 2:
                 sortedarg = np.argsort(step_sizes)
-                if step_sizes[sortedarg[0]] < self.combine_threshold:
+                if step_sizes[sortedarg[0]] < self.combine_threshold: 
+                #if step_sizes[sortedarg[1]] < self.combine_threshold: if lowest 2 below threshold
                     self.combine_parts(sortedarg[0], sortedarg[1])
                     if self.nextcycle >= len(self.params):
                         self.nextcycle = 0
