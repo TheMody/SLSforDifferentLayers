@@ -1,4 +1,3 @@
-from transformers import BertTokenizer, BertModel, ElectraTokenizer, ElectraModel
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -14,6 +13,7 @@ from torch.utils.data import DataLoader
 from data import load_wiki
 import os
 from sls.adam_sls import AdamSLS
+from sls.slsoriginal.adam_sls import AdamSLS as orAdamSLS
 import wandb
 from cosine_scheduler import CosineWarmupScheduler
 logging.set_verbosity_error()
@@ -41,7 +41,7 @@ class NLP_embedder(nn.Module):
         self.loss = nn.CrossEntropyLoss()
 
         if args.model == "bert":
-            from transformers import BertTokenizer, BertForMaskedLM
+            from transformers import BertTokenizer, BertModel
             self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
             self.model = BertModel.from_pretrained('bert-base-uncased')
             self.output_length = 768
@@ -98,9 +98,11 @@ class NLP_embedder(nn.Module):
                 if args.opts["opt"] == "sgd":    
                     self.optimizer = optim.SGD(self.parameters(), lr=args.opts["lr"] )
                 if args.opts["opt"] == "adamsls":    
-                    self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] ,strategy = args.update_rule, combine_threshold = args.combine)
+                    self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] )
+                if args.opts["opt"] == "amsgradsls":    
+                    self.optimizer = orAdamSLS( [param for name,param in self.named_parameters() if not "pooler" in name] ,base_opt = "amsgrad")
                 if args.opts["opt"] == "sgdsls":    
-                    self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]],strategy = args.update_rule, combine_threshold = args.combine, base_opt = "scalar",gv_option = "scalar" )
+                    self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]], base_opt = "scalar",gv_option = "scalar" )
         else:
             querylist = []
             keylist = []
@@ -135,11 +137,11 @@ class NLP_embedder(nn.Module):
     def fit(self, x, y, epochs=1, X_val= None,Y_val= None):
         wandb.init(project="SLSforDifferentLayers"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
         "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth, entity="pkenneweg", 
-        group = "batchsize_exp"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule + str(self.args.combine)+ str(self.batch_size) )
+        group = "avgarmijo"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule + str(self.args.combine)+ str(self.batch_size) )
         wandb.watch(self)
         
         self.mode = "cls"
-        if (not self.args.opts["opt"] == "adamsls") and (not self.args.opts["opt"] == "sgdsls"):
+        if (not "sls" in  self.args.opts["opt"]):
             self.scheduler= CosineWarmupScheduler(optimizer= self.optimizer, 
                                                 warmup = math.ceil(len(x)*epochs *0.1 / self.batch_size) ,
                                                     max_iters = math.ceil(len(x)*epochs  / self.batch_size))
@@ -161,7 +163,7 @@ class NLP_embedder(nn.Module):
                 batch_y = batch_y.to(device)
                 batch_x = batch_x.to(device)
 
-                if self.args.opts["opt"] == "adamsls" or self.args.opts["opt"] == "sgdsls":
+                if "sls" in  self.args.opts["opt"]:
                     closure = lambda : self.criterion(self(batch_x), batch_y)
                     self.optimizer.zero_grad()
                     loss = self.optimizer.step(closure = closure)
@@ -175,13 +177,13 @@ class NLP_embedder(nn.Module):
                     self.scheduler.step()                              
 
                 dict = {"loss": loss.item() , "time_per_step":time.time()-startsteptime}#, "backtracks": np.sum(self.optimizer[a].state['n_backtr'][-1] for a in range(len(self.optimizer)))}
-                if self.args.opts["opt"] == "adamsls" or self.args.opts["opt"] == "sgdsls":
+                if "sls" in  self.args.opts["opt"]:
                    for a,step_size in enumerate( self.optimizer.state['step_sizes']):
                         dict["step_size"+str(a)] = step_size
                 else:
                     dict["step_size"+str(0)] = self.scheduler.get_last_lr()[0]
                     #      print(dict["step_size"+str(a)])
-                wandb.log(dict,  step=i*self.batch_size +  e*len(x))
+                wandb.log(dict)#,  step=i*self.batch_size +  e*len(x))
                 accloss = accloss + loss.item()
                 accsteps += 1
                 if i % np.max((1,int((len(x)/self.batch_size)*0.1))) == 0:
@@ -193,7 +195,7 @@ class NLP_embedder(nn.Module):
                 with torch.no_grad():
                     accuracy = self.evaluate(X_val, Y_val).item()
                     print("accuracy after", e, "epochs:",accuracy, "time per epoch", time.time()-start)
-                    wandb.log({"accuracy": accuracy},  step=i*self.batch_size +  e*len(x))
+                    wandb.log({"accuracy": accuracy})#,  step=i*self.batch_size +  e*len(x))
             else:
                 print("epoch",e,"time per epoch", time.time()-start)
                 

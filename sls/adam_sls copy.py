@@ -71,9 +71,6 @@ class AdamSLS(StochLineSearchBase):
         self.timescale = timescale
         # self.state['step_size'] = init_step_size
 
-        self.avg_decrease = [0.0 for i in range(len(params))]
-        self.avg_gradient_norm = [0.0 for i in range(len(params))]
-
         self.clip_grad = clip_grad
         self.gv_option = gv_option
         self.base_opt = base_opt
@@ -161,19 +158,17 @@ class AdamSLS(StochLineSearchBase):
 
         # compute step size and execute step
         # =================
-        for i in range(len(self.avg_gradient_norm)):
-            self.avg_gradient_norm[i] = self.avg_gradient_norm[i] * self.beta + (pp_norm[i]) *(1-self.beta)
         if self.first_step:
-            step_size, loss_next = self.line_search(-1,step_sizes[0], params_current, grad_current, loss, closure_deterministic,  precond=True)
+            step_size, loss_next = self.line_search(-1,step_sizes[0], params_current, grad_current, loss, closure_deterministic, grad_norm, non_parab_dec=torch.sum(torch.stack(pp_norm)), precond=True)
         #    self.try_sgd_precond_update(-1,self.params, step_size, params_current, grad_current, self.momentum)
             step_sizes = [step_size for i in range(len(step_sizes))]
             self.at_step = self.at_step +1
-            if self.at_step > 5:
+            if self.at_step > 3:
                 self.first_step = False
         else:
             for i,step_size in enumerate(step_sizes):
                 if i == self.nextcycle:
-                    step_size, loss_next = self.line_search(i,step_size, params_current[i], grad_current[i], loss, closure_deterministic, precond=True)
+                    step_size, loss_next = self.line_search(i,step_size, params_current[i], grad_current[i], loss, closure_deterministic, grad_norm[i], non_parab_dec=pp_norm[i], precond=True)
                   #  self.try_sgd_precond_update(i,self.params[i], step_size, params_current[i], grad_current[i], self.momentum)
                     step_sizes[i] = step_size
                 else:

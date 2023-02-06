@@ -78,18 +78,22 @@ class StochLineSearchBase(torch.optim.Optimizer):
         # deterministic closure
         raise RuntimeError("This function should not be called")
 
-    def line_search(self,i, step_size, params_current, grad_current, loss, closure_deterministic, precond=False):
+    def line_search(self,i, step_size, params_current, grad_current, loss, closure_deterministic, grad_norm, non_parab_dec=None, precond=False):
         with torch.no_grad():
 
-            # if isinstance(grad_norm, list):
-            #     grad_norm = compute_grad_norm(grad_norm)
-            # if isinstance(grad_norm, torch.Tensor):
-            #     grad_norm = grad_norm.item()
-            if loss.item() != 0: #grad_norm >= 1e-8 and 
+            if isinstance(grad_norm, list):
+                grad_norm = compute_grad_norm(grad_norm)
+            if isinstance(grad_norm, torch.Tensor):
+                grad_norm = grad_norm.item()
+            if grad_norm >= 1e-8 and loss.item() != 0:
                 # check if condition is satisfied
                 found = 0
 
-                
+                if non_parab_dec is not None: #and not self.base_opt == "scalar":
+                    suff_dec = non_parab_dec
+                else:
+                    suff_dec = grad_norm**2
+
                 for e in range(100):
                     # try a prospective step
                     if self.first_step:
@@ -99,33 +103,24 @@ class StochLineSearchBase(torch.optim.Optimizer):
                             try_sgd_update(self.params, step_size, params_current, grad_current)
                     else:
                         if precond:
-                            self.try_sgd_precond_update(i,self.params[i], step_size, params_current, grad_current, momentum=0.)
+                            self.try_sgd_precond_update(i,self.params[i], step_size, params_current, grad_current,  momentum=0.)
                         else:
                             try_sgd_update(self.params[i], step_size, params_current, grad_current)
 
                     # compute the loss at the next step; no need to compute gradients.
                     loss_next = closure_deterministic()
                     
-                    decrease= self.avg_decrease[i] * self.beta + (loss-loss_next) *(1-self.beta)
 
                     self.state['n_forwards'] += 1
 
-                    # if loss - loss_next == 0.0:
-                    #     found = 1
-                    #     print("had cancelation error loss was equal no decrease necessary")
-                    # el
                     if self.line_search_fn == "armijo":
-                        if self.first_step:
-                            suff_dec = torch.sum(torch.stack(self.avg_gradient_norm))
-                        else:
-                            suff_dec = self.avg_gradient_norm[i]
                         found, step_size = self.check_armijo_conditions(step_size=step_size,
-                                                                        decrease=decrease,
+                                                                        loss=loss,
                                                                         suff_dec=suff_dec,
+                                                                        loss_next=loss_next,
                                                                         c=self.c,
                                                                         beta_b=self.beta_b)
                     if found == 1:
-                        self.avg_decrease[i]  = decrease
                         break
               #  self.backtracks  = e
                 # if line search exceeds max_epochs
@@ -138,20 +133,22 @@ class StochLineSearchBase(torch.optim.Optimizer):
                 self.state['n_backtr'].append(e)
 
             else:
-                print("loss is {}".format( loss.item()))
+                print("Grad norm is {} and loss is {}".format(grad_norm, loss.item()))
                 if loss.item() == 0:
                     self.state['numerical_error'] += 1
-                # if grad_norm == 0:
-                #     self.state["zero_steps"] += 1
+                if grad_norm == 0:
+                    self.state["zero_steps"] += 1
                 #step_size = 0
                 loss_next = closure_deterministic()
 
         return step_size, loss_next
 
-    def check_armijo_conditions(self, step_size, decrease, suff_dec, c, beta_b):
+    def check_armijo_conditions(self, step_size, loss, suff_dec, loss_next, c, beta_b):
         found = 0
         sufficient_decrease = (step_size) * c * suff_dec
-        if (decrease >= sufficient_decrease):
+        rhs = loss - sufficient_decrease
+        break_condition = loss_next - rhs
+        if (break_condition <= 0):
             found = 1
         else:
             step_size = step_size * beta_b
