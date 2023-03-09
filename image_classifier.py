@@ -29,9 +29,9 @@ class Image_classifier(nn.Module):
         self.num_classes = num_classes
         self.args = args
         self.feature_extractor = AutoFeatureExtractor.from_pretrained("microsoft/resnet-50")
-        self.model = ResNetModel.from_pretrained("microsoft/resnet-18")
-       # configuration = ResNetConfig()
-       # self.model = ResNetModel(configuration)
+        #self.model = ResNetModel.from_pretrained("microsoft/resnet-34")
+        configuration = ResNetConfig(layer_type = "basic", hidden_sizes=[64, 128, 256, 512], depths = [3, 4, 6, 3])
+        self.model = ResNetModel(configuration)
         # for name,param in self.model.named_parameters():
         #     print(name)
         #out shape is (1,2048,7,7)
@@ -70,19 +70,22 @@ class Image_classifier(nn.Module):
                               #  print("included", name , "in", i)
                 pparamalist.append(paramlist)
             if args.opts["opt"] == "adamsls":  
-                    self.optimizer = AdamSLS(pparamalist,strategy = args.update_rule , combine_threshold = args.combine)
+                    self.optimizer = AdamSLS(pparamalist,strategy = args.update_rule , combine_threshold = args.combine, c = self.args.c )
             if args.opts["opt"] == "sgdsls":  
-                    self.optimizer = AdamSLS( pparamalist,strategy = args.update_rule, combine_threshold = args.combine, base_opt = "scalar",gv_option = "scalar" )
+                    self.optimizer = AdamSLS( pparamalist,strategy = args.update_rule, combine_threshold = args.combine, base_opt = "scalar",gv_option = "scalar", c = self.args.c  )
                  
         else:
+           # print(args.opts["opt"])
             if args.opts["opt"] == "adam":    
                 self.optimizer = optim.Adam(self.parameters(), lr=args.opts["lr"] )
             if args.opts["opt"] == "sgd":    
                 self.optimizer = optim.SGD(self.parameters(), lr=args.opts["lr"] )
+            if args.opts["opt"] == "oladamsls":    
+                self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] , c = self.args.c*0.3, smooth = False )
             if args.opts["opt"] == "adamsls":    
-                self.optimizerm = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] ,strategy = args.update_rule, combine_threshold = args.combine)
+                self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] ,strategy = args.update_rule, combine_threshold = args.combine, c = self.args.c )
             if args.opts["opt"] == "sgdsls":    
-                self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]],strategy = args.update_rule, combine_threshold = args.combine, base_opt = "scalar",gv_option = "scalar" )
+                self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]],strategy = args.update_rule, combine_threshold = args.combine, base_opt = "scalar",gv_option = "scalar", c = self.args.c  )
 
     def forward(self,x):
         x = self.model(**x).last_hidden_state
@@ -92,15 +95,10 @@ class Image_classifier(nn.Module):
     def fit(self,data, epochs, eval_ds = None, labelname = "label", dataname = "img"):
         wandb.init(project="SLSforDifferentLayersImage"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
         "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth, entity="pkenneweg", 
-        group = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule + str(self.args.combine) )
-        wandb.watch(self)
-        # wandb.init(project="SLSforDifferentLayersImage"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
-        # "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth, entity="pkenneweg", 
-        # group = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) )
-        # wandb.watch(self)
+        group = "resnet"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule + str(self.args.combine)+"_c"+ str(self.args.c) )
         
         self.mode = "cls"
-        if (not self.args.opts["opt"] == "adamsls") and (not self.args.opts["opt"] == "sgdsls"):
+        if not "sls" in self.args.opts["opt"]:
             self.scheduler = CosineWarmupScheduler(optimizer= self.optimizer, 
                                                 warmup = math.ceil(len(data)*epochs *0.1 / self.batch_size) ,
                                                     max_iters = math.ceil(len(data)*epochs  / self.batch_size))
@@ -118,7 +116,7 @@ class Image_classifier(nn.Module):
                 batch_y = torch.LongTensor(data[index:index+self.batch_size][labelname]).to(device)
                 batch_x = self.feature_extractor(batch_x, return_tensors="pt").to(device)
 
-                if self.args.opts["opt"] == "adamsls" or self.args.opts["opt"] == "sgdsls":
+                if "sls" in self.args.opts["opt"]:
                     closure = lambda : self.criterion(self(batch_x), batch_y)
                     self.optimizer.zero_grad()
                     loss = self.optimizer.step(closure = closure)
@@ -130,15 +128,16 @@ class Image_classifier(nn.Module):
                     loss.backward()
                     self.optimizer.step()
                     self.scheduler.step()      
-
+                print(self.args.opts["opt"])
                 dict = {"loss": loss.item() , "time_per_step":time.time()-startsteptime}    
-                if self.args.opts["opt"] == "adamsls" or self.args.opts["opt"] == "sgdsls":
-                   for a,step_size in enumerate( self.optimizer.state['step_sizes']):
+                if "sls" in  self.args.opts["opt"]:
+                    for a,step_size in enumerate( self.optimizer.state['step_sizes']):
                         dict["step_size"+str(a)] = step_size
+                        dict["avg_grad_norm"+str(a)] = self.optimizer.state["grad_norm_avg"][a]
+                        dict["loss_decrease"+str(a)] = self.optimizer.state["loss_dec_avg"][a]
                 else:
-                    for a,scheduler in enumerate( self.scheduler):
-                        dict["step_size"+str(a)] = scheduler.get_last_lr()
-                    #      print(dict["step_size"+str(a)])
+                    if self.args.opts["opt"] == "adam":
+                        dict["step_size"+str(0)] = self.scheduler.get_last_lr()[0]
                 wandb.log(dict)
                 accloss = accloss + loss.item()
                 accsteps += 1

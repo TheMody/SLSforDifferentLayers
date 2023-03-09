@@ -50,6 +50,7 @@ def train(args, config):
     args.update_rule = config["DEFAULT"]["update_rule"]
     args.model = config["DEFAULT"]["model"]
     args.savepth = config["DEFAULT"]["directory"]
+    args.c = float(config["DEFAULT"]["c"])
     num_classes = 2
     if "mnli" in dataset:
         num_classes = 3

@@ -88,9 +88,9 @@ class NLP_embedder(nn.Module):
                                   #  print(name, param.requires_grad, param.grad)
                     pparamalist.append(paramlist)
                 if args.opts["opt"] == "adamsls":  
-                    self.optimizer = AdamSLS(pparamalist,strategy = args.update_rule , combine_threshold = args.combine)
+                    self.optimizer = AdamSLS(pparamalist,strategy = args.update_rule , combine_threshold = args.combine, c = self.args.c)
                 if args.opts["opt"] == "sgdsls":  
-                    self.optimizer = AdamSLS( pparamalist,strategy = args.update_rule, combine_threshold = args.combine, base_opt = "scalar",gv_option = "scalar" )
+                    self.optimizer = AdamSLS( pparamalist,strategy = args.update_rule, combine_threshold = args.combine, base_opt = "scalar",gv_option = "scalar" , c = self.args.c)
                  #   self.optimizer.append(SgdSLS(pparamalist ))
             else:
                 if args.opts["opt"] == "adam":    
@@ -98,11 +98,11 @@ class NLP_embedder(nn.Module):
                 if args.opts["opt"] == "sgd":    
                     self.optimizer = optim.SGD(self.parameters(), lr=args.opts["lr"] )
                 if args.opts["opt"] == "adamsls":    
-                    self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] )
+                    self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] , c = self.args.c*0.3)
                 if args.opts["opt"] == "amsgradsls":    
-                    self.optimizer = orAdamSLS( [param for name,param in self.named_parameters() if not "pooler" in name] ,base_opt = "amsgrad")
+                    self.optimizer = orAdamSLS( [param for name,param in self.named_parameters() if not "pooler" in name] ,base_opt = "amsgrad", c = self.args.c)
                 if args.opts["opt"] == "sgdsls":    
-                    self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]], base_opt = "scalar",gv_option = "scalar" )
+                    self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]], base_opt = "scalar",gv_option = "scalar", c = self.args.c )
         else:
             querylist = []
             keylist = []
@@ -137,8 +137,8 @@ class NLP_embedder(nn.Module):
     def fit(self, x, y, epochs=1, X_val= None,Y_val= None):
         wandb.init(project="SLSforDifferentLayers"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
         "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth, entity="pkenneweg", 
-        group = "avgarmijo"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule + str(self.args.combine)+ str(self.batch_size) )
-        wandb.watch(self)
+        group = "avgarmijo_momentum_"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule + str(self.args.combine)+"bs"+ str(self.batch_size) +"c"+ str(self.args.c))
+        #wandb.watch(self)
         
         self.mode = "cls"
         if (not "sls" in  self.args.opts["opt"]):
@@ -174,22 +174,25 @@ class NLP_embedder(nn.Module):
                     loss = self.criterion(y_pred, batch_y)    
                     loss.backward()
                     self.optimizer.step()
-                    self.scheduler.step()                              
+                    self.scheduler.step()       
 
-                dict = {"loss": loss.item() , "time_per_step":time.time()-startsteptime}#, "backtracks": np.sum(self.optimizer[a].state['n_backtr'][-1] for a in range(len(self.optimizer)))}
-                if "sls" in  self.args.opts["opt"]:
-                   for a,step_size in enumerate( self.optimizer.state['step_sizes']):
-                        dict["step_size"+str(a)] = step_size
-                else:
-                    dict["step_size"+str(0)] = self.scheduler.get_last_lr()[0]
-                    #      print(dict["step_size"+str(a)])
-                wandb.log(dict)#,  step=i*self.batch_size +  e*len(x))
-                accloss = accloss + loss.item()
-                accsteps += 1
-                if i % np.max((1,int((len(x)/self.batch_size)*0.1))) == 0:
-                    print(i, accloss/ accsteps)
-                    accsteps = 0
-                    accloss = 0
+                if (i*self.batch_size) % 32 == 0:
+                    dict = {"loss": loss.item() , "time_per_step":time.time()-startsteptime}#, "backtracks": np.sum(self.optimizer[a].state['n_backtr'][-1] for a in range(len(self.optimizer)))}
+                    if "sls" in  self.args.opts["opt"]:
+                        for a,step_size in enumerate( self.optimizer.state['step_sizes']):
+                            dict["step_size"+str(a)] = step_size
+                            dict["avg_grad_norm"+str(a)] = self.optimizer.state["grad_norm_avg"][a]
+                            dict["loss_decrease"+str(a)] = self.optimizer.state["loss_dec_avg"][a]
+                    else:
+                        dict["step_size"+str(0)] = self.scheduler.get_last_lr()[0]
+                        #      print(dict["step_size"+str(a)])
+                    wandb.log(dict)#,  step=i*self.batch_size +  e*len(x))
+                    accloss = accloss + loss.item()
+                    accsteps += 1
+                    if i % np.max((1,int((len(x)/self.batch_size)*0.1))) == 0:
+                        print(i, accloss/ accsteps)
+                        accsteps = 0
+                        accloss = 0
 
             if X_val != None:
                 with torch.no_grad():
