@@ -118,6 +118,8 @@ class StochLineSearchBase(torch.optim.Optimizer):
                         self.avg_decrease[i] = decrease
                         suff_dec = self.pp_norm[i]
                         self.avg_gradient_norm[i] = suff_dec
+                    # print("self.avg_decrease[i]", self.avg_decrease[i])
+                    # print("self.avg_gradient_norm[i]", self.avg_gradient_norm[i])
                     found, step_size = self.check_armijo_conditions(step_size=step_size,
                                                                     decrease=decrease,
                                                                     suff_dec=suff_dec,
@@ -149,7 +151,9 @@ class StochLineSearchBase(torch.optim.Optimizer):
         found = 0
         # print("suff_dec", suff_dec)
         # print("decrease", decrease)
-        sufficient_decrease = (step_size) * c * suff_dec
+        # print("lr", decrease/(suff_dec*c))
+        # print("step size", step_size)
+        sufficient_decrease = step_size * c * suff_dec
         if (decrease >= sufficient_decrease):
             found = 1
         else:

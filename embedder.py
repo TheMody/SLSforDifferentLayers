@@ -98,7 +98,9 @@ class NLP_embedder(nn.Module):
                 if args.opts["opt"] == "sgd":    
                     self.optimizer = optim.SGD(self.parameters(), lr=args.opts["lr"] )
                 if args.opts["opt"] == "adamsls":    
-                    self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] , c = self.args.c*0.3)
+                    self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] , c = self.args.c)
+                if args.opts["opt"] == "oladamsls":    
+                    self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] , c = self.args.c*0.3, smooth=False)
                 if args.opts["opt"] == "amsgradsls":    
                     self.optimizer = orAdamSLS( [param for name,param in self.named_parameters() if not "pooler" in name] ,base_opt = "amsgrad", c = self.args.c)
                 if args.opts["opt"] == "sgdsls":    

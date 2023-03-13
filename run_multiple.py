@@ -1,15 +1,15 @@
 
 from main import main
 
-datasets = ["mnli"] #["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall","sst2","mrpc" ,"cola", "qnli","mnli"]#[ ]#,"mnli"]
+datasets = ["mnli", "sst2","mrpc" , "qnli"] #["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall",,"cola", "qnli","mnli"]#[ ]#,"mnli"]
 split_by = ["layer"]#"layer","qkv",
 n_opts = [1]
 models = ["bert"]#, "roberta"]
 update_rule = ["cycle"]#"cycle",  "impact_mag"
 optim = [ "adamsls"]#,"adam", "sgdsls"]#, "sgd", "sgdsls"]"adam", 
 combine = [0]
-numexp = 1
-batch_size = [4,8,16,32]
+numexp = 5
+batch_size = [32]
 cs = [0.3]
 
 def create_config(name, ds, split, n_opt, model, opt, update_r = "cycle", i = 0, combine = 0, batch_size = 32, c = 0.1, cls = "transformer"):
