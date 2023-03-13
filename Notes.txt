@@ -5,3 +5,5 @@ understand complexity and see what it relates to in a transformer
 SLS + SAM on the network
 try 10 adamsls on transformer pre-training
 maybe try radam instead of adam
+TODO: find a use case for PLASLS, maybe image classification with resnet
+When taking a step in the future only take a step with the updated part of the network, freeze the rest

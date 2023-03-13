@@ -11,7 +11,7 @@ class AdamSLS(StochLineSearchBase):
                  params,
                  n_batches_per_epoch=500,
                  init_step_size=0.1,
-                 c=0.2,
+                 c=0.1,
                  gamma=2.0,
                  beta=0.999,
                  momentum=0.9,
@@ -25,9 +25,9 @@ class AdamSLS(StochLineSearchBase):
                  beta_f=2.0,
                  reset_option=1,
                  timescale = 0.05,
+                 first_step = True,
                  line_search_fn="armijo",
-                 combine_threshold = 0,
-                 smooth = True):
+                 combine_threshold = 0):
         params = list(params)
         super().__init__(params,
                          n_batches_per_epoch=n_batches_per_epoch,
@@ -44,7 +44,6 @@ class AdamSLS(StochLineSearchBase):
         # sps stuff
         # self.adapt_flag = adapt_flag
 
-        self.smooth = smooth
         # sls stuff
         self.beta_f = beta_f
         self.beta_b = beta_b
@@ -68,14 +67,9 @@ class AdamSLS(StochLineSearchBase):
 
         self.momentum = momentum
         self.beta = beta
-        self.at_step = 0
-        self.first_step = True
+        self.first_step = first_step
         self.timescale = timescale
         # self.state['step_size'] = init_step_size
-
-        self.avg_decrease = [0.0 for i in range(len(params))]
-        self.avg_gradient_norm = [0.0 for i in range(len(params))]
-        self.avg_gradient_norm_scaled = [0.0 for i in range(len(params))]
 
         self.clip_grad = clip_grad
         self.gv_option = gv_option
@@ -125,6 +119,10 @@ class AdamSLS(StochLineSearchBase):
         # save the current parameters:
         params_current = [copy.deepcopy(param) for param in self.params]
         grad_current = [get_grad_list(param) for param in self.params]
+        self.allgrad_current = []
+        for grad in grad_current:
+            for g in grad:
+                self.allgrad_current.append(g)
         # print("time for copies:", time.time()-start)
         # start = time.time()
 
@@ -152,10 +150,7 @@ class AdamSLS(StochLineSearchBase):
 
         # print("time for gv and mv calcs:", time.time()-start)
         # start = time.time()
-        if self.base_opt == "scalar":
-            pp_norm = grad_norm
-        else:
-            pp_norm =[self.get_pp_norm(g_cur,i) for i,g_cur in enumerate(grad_current)]
+        pp_norm, _ = self.get_pp_norm(grad_current=self.allgrad_current)
         step_sizes = self.state.get('step_sizes') or self.init_step_sizes
         step_sizes = [self.reset_step(step_size=step_size,
                                     n_batches_per_epoch=self.n_batches_per_epoch,
@@ -167,30 +162,42 @@ class AdamSLS(StochLineSearchBase):
 
         # compute step size and execute step
         # =================
-        for i in range(len(self.avg_gradient_norm)):
-            self.avg_gradient_norm[i] = self.avg_gradient_norm[i] * self.beta + (pp_norm[i]) *(1-self.beta)
-        self.pp_norm = pp_norm
-        #    self.avg_gradient_norm_scaled[i] = self.avg_gradient_norm[i]/(1-self.beta)**(self.state['step']+1)
         if self.first_step:
-            step_size, loss_next = self.line_search(-1,step_sizes[0], params_current, grad_current, loss, closure_deterministic,  precond=True)
-            self.try_sgd_precond_update(-1,self.params, step_size, params_current, grad_current, self.momentum)
+            step_size, loss_next = self.line_search(-1,step_sizes, params_current, grad_current, loss, closure_deterministic, grad_norm, non_parab_dec=pp_norm, precond=True)
             step_sizes = [step_size for i in range(len(step_sizes))]
-            self.at_step = self.at_step +1
-            if self.at_step > 5:
-                self.first_step = False
+        #      self.c  = self.c / len(step_sizes)
+            self.first_step = False
         else:
+            if self.strategy == "impact_mag":
+                probabilities= [((2**(self.time_since_last_update[i]*self.timescale))  - 1)*0.2 +self.importance[i]/np.sum(self.importance) for i in range(len(step_sizes))]
+                probabilities = [p/np.sum(probabilities) for p in probabilities]
+                #  print(probabilities)
+                try:
+                    rand = np.random.choice([a for a in range(len(step_sizes))], p = probabilities)
+                except:
+                    rand = np.random.randint(len(step_sizes))
             for i,step_size in enumerate(step_sizes):
-                if i == self.nextcycle:
-                    step_size, loss_next = self.line_search(i,step_size, params_current[i], grad_current[i], loss, closure_deterministic, precond=True)
-                    self.try_sgd_precond_update(i,self.params[i], step_size, params_current[i], grad_current[i], self.momentum)
-                    step_sizes[i] = step_size
-                else:
-                    self.try_sgd_precond_update(i,self.params[i], step_size, params_current[i], grad_current[i], self.momentum)
+                if self.strategy == "impact_mag":
+                    if rand == i:
+                        step_size, loss_next = self.line_search(i,step_sizes, params_current, grad_current, loss, closure_deterministic, grad_norm, non_parab_dec=pp_norm, precond=True)
+                        step_sizes[i] = step_size
+                        self.importance[i] = (loss.item() - loss_next.item())*(1-self.momentum) + self.importance[i]*self.momentum
+                        self.time_since_last_update[i] = 0
+                    else:
+                        self.try_sgd_precond_update(i,self.params, step_sizes, params_current, grad_current, self.momentum)
+                        self.time_since_last_update[i] += 1
+                    
+                if self.strategy == "cycle":
+                    if i == self.nextcycle:
+                        step_size, loss_next = self.line_search(i,step_sizes, params_current, grad_current, loss, closure_deterministic, grad_norm, non_parab_dec=pp_norm, precond=True)
+                        step_sizes[i] = step_size
+                    # else:
+                    #     self.try_sgd_precond_update(i,self.params, step_sizes, params_current, grad_current, self.momentum)
             self.nextcycle += 1
             if self.nextcycle >= len(self.params):
                 self.nextcycle = 0
         
-       # print(step_sizes)
+
                 
         self.save_state(step_sizes, loss, loss_next, grad_norm)
 
@@ -207,10 +214,17 @@ class AdamSLS(StochLineSearchBase):
 
         return loss
 
-    def get_pp_norm(self, grad_current, i):
+    def get_pp_norm(self, grad_current):
+        if self.base_opt == "scalar":
+            return None,0
         if self.pp_norm_method in ['pp_armijo', "just_pp"]:
             pp_norm = 0
-            for g_i, gv_i in zip(grad_current, self.state['gv'][i]):
+          #  pp_norms = []
+            allstates = []
+            for state in self.state['gv']:
+                for s in state:
+                    allstates.append(s)
+            for i, (g_i, gv_i) in enumerate(zip(grad_current, allstates)):
                 if self.base_opt == 'adam':
                     gv_i_scaled = scale_vector(gv_i, self.beta, self.state['step']+1)
                     pv_i = 1. / (torch.sqrt(gv_i_scaled) + 1e-8)
@@ -226,42 +240,54 @@ class AdamSLS(StochLineSearchBase):
         else:
             raise ValueError('%s does not exist' % self.pp_norm_method)
 
-        return pp_norm
+        return pp_norm, 0#pp_norms
 
     @torch.no_grad()
-    def try_sgd_precond_update(self, i,params, step_size, params_current, grad_current, momentum):
+    def try_sgd_precond_update(self, i,params, step_sizes, params_current, grad_current, momentum):
         if self.gv_option in ['scalar']:
             if i == -1:
                 zipped = zip([item for sublist in params for item in sublist], [item for sublist in params_current for item in sublist], [item for sublist in grad_current for item in sublist] )
+                for p_next, p_current, g_current in zipped:
+                        p_next.data[:] = p_current.data
+                        p_next.data.add_(g_current, alpha=- step_sizes[0])
             else:
-                zipped = zip(params, params_current, grad_current)
-
-            for p_next, p_current, g_current in zipped:
-                p_next.data[:] = p_current.data
-                p_next.data.add_(g_current, alpha=- step_size)
+                for i, step_size in enumerate(step_sizes):
+                    zipped = zip(params[i], params_current[i], grad_current[i])
+                    for p_next, p_current, g_current in zipped:
+                        p_next.data[:] = p_current.data
+                        p_next.data.add_(g_current, alpha=- step_size)
         
         elif self.gv_option == 'per_param':
             if self.base_opt == 'adam':
                 if i == -1:
                     zipped = zip([item for sublist in params for item in sublist], [item for sublist in params_current for item in sublist], [item for sublist in grad_current for item in sublist], 
                         [item for sublist in self.state['gv'] for item in sublist],[item for sublist in self.state['mv'] for item in sublist] )
+                    for p_next, p_current, g_current, gv_i, mv_i in zipped:
+                            gv_i_scaled = scale_vector(gv_i, self.beta, self.state['step']+1)
+                            pv_list = 1. / (torch.sqrt(gv_i_scaled) + 1e-8)
+
+                            if momentum == 0. or  self.mom_type == 'heavy_ball':
+                                mv_i_scaled = g_current
+                            elif self.mom_type == 'standard':
+                                mv_i_scaled = scale_vector(mv_i, momentum, self.state['step']+1)
+
+                            p_next.data[:] = p_current.data
+                            p_next.data.add_((pv_list *  mv_i_scaled), alpha=- step_sizes[0])
                 else:
-                    zipped = zip(params, params_current, grad_current, self.state['gv'][i], self.state['mv'][i])
-                for p_next, p_current, g_current, gv_i, mv_i in zipped:
-                    gv_i_scaled = scale_vector(gv_i, self.beta, self.state['step']+1)
-                    pv_list = 1. / (torch.sqrt(gv_i_scaled) + 1e-8)
+                    for i, step_size in enumerate(step_sizes):
+                        zipped = zip(params[i], params_current[i], grad_current[i], self.state['gv'][i], self.state['mv'][i])
+                        for p_next, p_current, g_current, gv_i, mv_i in zipped:
+                            gv_i_scaled = scale_vector(gv_i, self.beta, self.state['step']+1)
+                            pv_list = 1. / (torch.sqrt(gv_i_scaled) + 1e-8)
 
-                    if momentum == 0. or  self.mom_type == 'heavy_ball':
-                        mv_i_scaled = g_current
-                    elif self.mom_type == 'standard':
-                        mv_i_scaled = scale_vector(mv_i, momentum, self.state['step']+1)
+                            if momentum == 0. or  self.mom_type == 'heavy_ball':
+                                mv_i_scaled = g_current
+                            elif self.mom_type == 'standard':
+                                mv_i_scaled = scale_vector(mv_i, momentum, self.state['step']+1)
 
-                  #  print("p_current", p_current)
+                            p_next.data[:] = p_current.data
+                            p_next.data.add_((pv_list *  mv_i_scaled), alpha=- step_size)
                     
-                    p_next.data[:] = p_current.data
-                    p_next.data.add_((pv_list *  mv_i_scaled), alpha=- step_size)
-                #    print("p_next", p_next)
-            
 
             else:
                 raise ValueError('%s does not exist' % self.base_opt)

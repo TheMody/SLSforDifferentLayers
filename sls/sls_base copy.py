@@ -78,18 +78,22 @@ class StochLineSearchBase(torch.optim.Optimizer):
         # deterministic closure
         raise RuntimeError("This function should not be called")
 
-    def line_search(self,i, step_size, params_current, grad_current, loss, closure_deterministic, precond=False):
+    def line_search(self,i, step_size, params_current, grad_current, loss, closure_deterministic, grad_norm, non_parab_dec=None, precond=False):
         with torch.no_grad():
 
-            if self.first_step:
-                suff_dec = torch.sum(torch.stack(self.avg_gradient_norm))
-            else:
-                suff_dec = self.avg_gradient_norm[i]
-            if loss.item() != 0 and suff_dec >= 1e-8:
+            # if isinstance(grad_norm, list):
+            #     grad_norm = compute_grad_norm(grad_norm)
+            # if isinstance(grad_norm, torch.Tensor):
+            #     grad_norm = grad_norm.item()
+            if loss.item() != 0: #grad_norm >= 1e-8 and 
                 # check if condition is satisfied
                 found = 0
 
-                
+                if non_parab_dec is not None: #and not self.base_opt == "scalar":
+                    suff_dec = non_parab_dec
+                else:
+                    suff_dec = grad_norm**2
+
                 for e in range(100):
                     # try a prospective step
                     if self.first_step:
@@ -105,56 +109,52 @@ class StochLineSearchBase(torch.optim.Optimizer):
 
                     # compute the loss at the next step; no need to compute gradients.
                     loss_next = closure_deterministic()
-                    decrease= (self.avg_decrease[i] * self.beta + (loss-loss_next) *(1-self.beta) )#/((1-self.beta)**((self.state['step']+1)/len(self.avg_decrease)))
+                    
 
                     self.state['n_forwards'] += 1
 
-                    if loss - loss_next == 0.0:
-                        found = 1
-                        print("had cancelation error loss was equal no decrease necessary")
-
-                    if not self.smooth:
-                        decrease = loss-loss_next
-                        self.avg_decrease[i] = decrease
-                        suff_dec = self.pp_norm[i]
-                        self.avg_gradient_norm[i] = suff_dec
-                    found, step_size = self.check_armijo_conditions(step_size=step_size,
-                                                                    decrease=decrease,
-                                                                    suff_dec=suff_dec,
-                                                                    c=self.c,
-                                                                    beta_b=self.beta_b)
+                    # if loss - loss_next == 0.0:
+                    #     found = 1
+                    #     print("had cancelation error loss was equal no decrease necessary")
+                    # el
+                    if self.line_search_fn == "armijo":
+                        found, step_size = self.check_armijo_conditions(step_size=step_size,
+                                                                        loss=loss,
+                                                                        suff_dec=suff_dec,
+                                                                        loss_next=loss_next,
+                                                                        c=self.c,
+                                                                        beta_b=self.beta_b)
                     if found == 1:
-                       # if not self.first_step:
-                        self.avg_decrease[i]  = self.avg_decrease[i] * self.beta + (loss-loss_next) *(1-self.beta) 
                         break
               #  self.backtracks  = e
                 # if line search exceeds max_epochs
-                # if found == 0:
-                #    # step_size = torch.tensor(data=1e-10)
-                #     try_sgd_update(self.params[i], torch.Tensor(1e-7), params_current, grad_current)
+                if found == 0:
+                   # step_size = torch.tensor(data=1e-10)
+                    try_sgd_update(self.params[i], 1e-10, params_current, grad_current)
 
                 self.state['backtracks'] += e
                 self.state['f_eval'].append(e)
                 self.state['n_backtr'].append(e)
 
             else:
-                print("loss is", loss.item(), "suff_dec", suff_dec)
+                print("Grad norm is {} and loss is {}".format(grad_norm, loss.item()))
                 if loss.item() == 0:
                     self.state['numerical_error'] += 1
+                if grad_norm == 0:
+                    self.state["zero_steps"] += 1
+                #step_size = 0
                 loss_next = closure_deterministic()
 
         return step_size, loss_next
 
-    def check_armijo_conditions(self, step_size, decrease, suff_dec, c, beta_b):
+    def check_armijo_conditions(self, step_size, loss, suff_dec, loss_next, c, beta_b):
         found = 0
-        # print("suff_dec", suff_dec)
-        # print("decrease", decrease)
         sufficient_decrease = (step_size) * c * suff_dec
-        if (decrease >= sufficient_decrease):
+        rhs = loss - sufficient_decrease
+        break_condition = loss_next - rhs
+        if (break_condition <= 0):
             found = 1
         else:
-           # step_size = decrease/(suff_dec*c)
-           # found = 1
             step_size = step_size * beta_b
 
         return found, step_size
@@ -189,8 +189,6 @@ class StochLineSearchBase(torch.optim.Optimizer):
         self.state['all_step_size'].append(step_sizes)
         self.state['all_losses'].append(loss.item())
         self.state['all_new_losses'].append(loss_next.item())
-        self.state['grad_norm_avg']  = [a.item() for a in self.avg_gradient_norm]
-        self.state['loss_dec_avg'] = [a.item()  if isinstance(a, torch.Tensor) else a for a in self.avg_decrease]
         self.state['n_batches'] += 1
      #   self.state['avg_step'] += step_sizes
         if isinstance(grad_norm, torch.Tensor):
@@ -203,8 +201,6 @@ class StochLineSearchBase(torch.optim.Optimizer):
         self.state['all_step_size'] = []
         self.state['all_losses'] = []
         self.state['grad_norm'] = []
-        self.state['grad_norm_avg'] = []
-        self.state['loss_dec_avg'] = []
         self.state['all_new_losses'] = []
         self.state['f_eval'] = []
         self.state['backtracks'] = 0

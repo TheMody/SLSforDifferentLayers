@@ -4,13 +4,13 @@ import torch
 import numpy as np
 
 from .sls_base import StochLineSearchBase, get_grad_list, compute_grad_norm, random_seed_torch, try_sgd_update
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-
-class AdamSLS_perLayer(StochLineSearchBase):
+class AdamSLS(StochLineSearchBase):
     def __init__(self,
                  params,
                  n_batches_per_epoch=500,
-                 init_step_size=0.01,
+                 init_step_size=0.1,
                  c=0.1,
                  gamma=2.0,
                  beta=0.999,
@@ -70,7 +70,7 @@ class AdamSLS_perLayer(StochLineSearchBase):
                 self.state['mv'] = [torch.zeros(p.shape).to(p.device) for p in params]
             
             if self.base_opt == 'amsgrad':
-                self.state['gv_max'] = [torch.zeros(p.shape).to(p.device) for p in params]
+                self.state['gv_max'] = [torch.zeros(p.shape).to(device) for p in params]
 
     def step(self, closure):
         # deterministic closure
@@ -90,12 +90,8 @@ class AdamSLS_perLayer(StochLineSearchBase):
         # save the current parameters:
         params_current = copy.deepcopy(self.params)
         grad_current = get_grad_list(self.params)
-        # not_None_pos = [i for i,g in enumerate(grad_current) if not g == None]
-        # grad_current = [grad_current[i] for i in not_None_pos]
-        # self.params = [self.params[i] for i in not_None_pos]
-        
-
         grad_norm = compute_grad_norm(grad_current)
+
         #  Gv options
         # =============
         if self.gv_option in ['scalar']:
