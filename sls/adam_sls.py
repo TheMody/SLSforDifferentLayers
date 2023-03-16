@@ -23,11 +23,14 @@ class AdamSLS(StochLineSearchBase):
                  clip_grad=False,
                  beta_b=0.9,
                  beta_f=2.0,
+                 beta_s = 0.999,
                  reset_option=1,
                  timescale = 0.05,
                  line_search_fn="armijo",
                  combine_threshold = 0,
-                 smooth = True):
+                 smooth = True,
+                 bs_scale = True,
+                 batch_size = 32.0):
         params = list(params)
         super().__init__(params,
                          n_batches_per_epoch=n_batches_per_epoch,
@@ -48,6 +51,7 @@ class AdamSLS(StochLineSearchBase):
         # sls stuff
         self.beta_f = beta_f
         self.beta_b = beta_b
+        self.beta_s = beta_s
         self.reset_option = reset_option
         self.combine_threshold = combine_threshold
 
@@ -71,11 +75,13 @@ class AdamSLS(StochLineSearchBase):
         self.at_step = 0
         self.first_step = True
         self.timescale = timescale
+        self.bs_scale = bs_scale
+        self.batch_size = batch_size
         # self.state['step_size'] = init_step_size
 
-        self.avg_decrease = [0.0 for i in range(len(params))]
-        self.avg_gradient_norm = [0.0 for i in range(len(params))]
-        self.avg_gradient_norm_scaled = [0.0 for i in range(len(params))]
+        self.avg_decrease = torch.zeros(len(params))#(0.0 for i in range(len(params))]
+        self.avg_gradient_norm = torch.zeros(len(params))#[0.0 for i in range(len(params))]
+      #  self.avg_gradient_norm_scaled = torch.zeros(len(params))#[0.0 for i in range(len(params))]
 
         self.clip_grad = clip_grad
         self.gv_option = gv_option
@@ -162,22 +168,28 @@ class AdamSLS(StochLineSearchBase):
                                     gamma=self.gamma,
                                     reset_option=self.reset_option,
                                     init_step_size=self.init_step_size) for step_size in step_sizes]
-        # print("time for ppnorm:", time.time()-start)
-        # start = time.time()
 
         # compute step size and execute step
         # =================
+     #   print(self.at_step)
         for i in range(len(self.avg_gradient_norm)):
-            self.avg_gradient_norm[i] = self.avg_gradient_norm[i] * self.beta + (pp_norm[i]) *(1-self.beta)
+            # print(i)
+            # print("self.avg_gradient_norm[i]",self.avg_gradient_norm[i])
+            # print("self.avg_decrease[i]",self.avg_decrease[i])
+            if i == self.nextcycle:
+                self.avg_gradient_norm[i] = self.avg_gradient_norm[i] * self.beta_s + (pp_norm[i]) *(1-self.beta_s)
         self.pp_norm = pp_norm
         #    self.avg_gradient_norm_scaled[i] = self.avg_gradient_norm[i]/(1-self.beta)**(self.state['step']+1)
         if self.first_step:
             step_size, loss_next = self.line_search(-1,step_sizes[0], params_current, grad_current, loss, closure_deterministic,  precond=True)
-            self.try_sgd_precond_update(-1,self.params, step_size, params_current, grad_current, self.momentum)
             step_sizes = [step_size for i in range(len(step_sizes))]
+            self.try_sgd_precond_update(-1,self.params, step_size, params_current, grad_current, self.momentum)
             self.at_step = self.at_step +1
             if self.at_step > 5:
                 self.first_step = False
+                for i in range(len(self.avg_gradient_norm)):
+                    self.avg_gradient_norm[i] = self.avg_gradient_norm[0]
+                    self.avg_decrease[i] = self.avg_decrease[-1]
         else:
             for i,step_size in enumerate(step_sizes):
                 if i == self.nextcycle:
@@ -185,6 +197,10 @@ class AdamSLS(StochLineSearchBase):
                     self.try_sgd_precond_update(i,self.params[i], step_size, params_current[i], grad_current[i], self.momentum)
                     step_sizes[i] = step_size
                 else:
+                    # if self.bs_scale:
+                    #     step_size_s = step_size * torch.sqrt(self.batch_size/32.0)
+                    # else: 
+                    #     step_size_s = step_size
                     self.try_sgd_precond_update(i,self.params[i], step_size, params_current[i], grad_current[i], self.momentum)
             self.nextcycle += 1
             if self.nextcycle >= len(self.params):

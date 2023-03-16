@@ -82,7 +82,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
         with torch.no_grad():
 
             if self.first_step:
-                suff_dec = torch.sum(torch.stack(self.avg_gradient_norm))
+                suff_dec = torch.sum(self.avg_gradient_norm)
             else:
                 suff_dec = self.avg_gradient_norm[i]
             if loss.item() != 0 and suff_dec >= 1e-8:
@@ -105,7 +105,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
 
                     # compute the loss at the next step; no need to compute gradients.
                     loss_next = closure_deterministic()
-                    decrease= (self.avg_decrease[i] * self.beta + (loss-loss_next) *(1-self.beta) )#/((1-self.beta)**((self.state['step']+1)/len(self.avg_decrease)))
+                    decrease= (self.avg_decrease[i] * self.beta_s + (loss-loss_next) *(1-self.beta_s) )#/((1-self.beta)**((self.state['step']+1)/len(self.avg_decrease)))
 
                     self.state['n_forwards'] += 1
 
@@ -127,7 +127,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
                                                                     beta_b=self.beta_b)
                     if found == 1:
                        # if not self.first_step:
-                        self.avg_decrease[i]  = self.avg_decrease[i] * self.beta + (loss-loss_next) *(1-self.beta) 
+                        self.avg_decrease[i]  = self.avg_decrease[i] * self.beta_s + (loss-loss_next) *(1-self.beta_s) 
                         break
               #  self.backtracks  = e
                 # if line search exceeds max_epochs

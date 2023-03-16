@@ -46,6 +46,7 @@ def train(args, config):
     args.opts = {"lr": lr, "opt": optimizer}
     args.combine = float(config["DEFAULT"]["combine"])
     args.ds = dataset
+    args.beta = float(config["DEFAULT"]["beta"])
     args.split_by = config["DEFAULT"]["split_by"]
     args.update_rule = config["DEFAULT"]["update_rule"]
     args.model = config["DEFAULT"]["model"]

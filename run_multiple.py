@@ -1,18 +1,19 @@
 
 from main import main
 
-datasets = ["mnli", "sst2","mrpc" , "qnli"] #["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall",,"cola", "qnli","mnli"]#[ ]#,"mnli"]
+datasets = ["qnli", "sst2", "mnli"] #["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall",,"cola", "qnli","mnli"]#[ ]#,"mnli"]
 split_by = ["layer"]#"layer","qkv",
-n_opts = [1]
+n_opts = [10]
 models = ["bert"]#, "roberta"]
 update_rule = ["cycle"]#"cycle",  "impact_mag"
 optim = [ "adamsls"]#,"adam", "sgdsls"]#, "sgd", "sgdsls"]"adam", 
 combine = [0]
-numexp = 5
-batch_size = [4,8,16,32]
-cs = [0.3]
+numexp = 3
+batch_size = [32]
+cs = [1.5]
+betas = [0.99]
 
-def create_config(name, ds, split, n_opt, model, opt, update_r = "cycle", i = 0, combine = 0, batch_size = 32, c = 0.1, cls = "transformer"):
+def create_config(name, ds, split, n_opt, model, opt, update_r = "cycle", i = 0, combine = 0, batch_size = 32, c = 0.1, cls = "transformer", beta = 0.9):
     with open(name, 'w') as f:
             f.write("[DEFAULT]\n")
             f.write("batch_size = "+ str(batch_size) +"\n")
@@ -30,25 +31,28 @@ def create_config(name, ds, split, n_opt, model, opt, update_r = "cycle", i = 0,
             f.write("c = " + str(c) + "\n")
             f.write("cls = " + cls + "\n")
             f.write("type = " + "NLP" + "\n")
+            f.write("beta = "+ str(beta))
    # print("results/"  +ds + opt+ str(n_opt) + model + split )
     main(name)
 
 for ds in datasets:
     for model in models:
         for opt in optim:
-            if "adamsls" in opt:
-                for update_r in update_rule:
-                    for split in split_by:
-                        if split == "layer":
-                            for n_opt in n_opts:
-                                for comb in combine:
-                                    for bs in batch_size:
-                                        for c in cs:
-                                            for i in range(numexp):
-                                                create_config("config_gen.json", ds, split, n_opt, model , opt, update_r, i,combine = comb, batch_size = bs, c = c)
-                        else:
-                            for i in range(numexp):
-                                create_config("config_gen.json", ds, split, 1, model , opt, update_r, i)
+            if "sls" in opt:
+                for beta in betas:
+                    for update_r in update_rule:
+                        for split in split_by:
+                            if split == "layer":
+                                for n_opt in n_opts:
+                                    for comb in combine:
+                                        for bs in batch_size:
+                                            for c in cs:
+                                                for i in range(numexp):
+                                                    create_config("config_gen.json", ds, split, n_opt, model , opt, 
+                                                        update_r, i,combine = comb, batch_size = bs, c = c, beta = beta)
+                            else:
+                                for i in range(numexp):
+                                    create_config("config_gen.json", ds, split, 1, model , opt, update_r, i, beta = beta)
             else:
                 for i in range(numexp):
                     create_config("config_gen.json", ds, "layer", 1, model , opt,"cycle", i)
