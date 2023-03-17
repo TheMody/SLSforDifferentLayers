@@ -128,7 +128,7 @@ class Image_classifier(nn.Module):
                     loss.backward()
                     self.optimizer.step()
                     self.scheduler.step()      
-                print(self.args.opts["opt"])
+               # print(self.args.opts["opt"])
                 dict = {"loss": loss.item() , "time_per_step":time.time()-startsteptime}    
                 if "sls" in  self.args.opts["opt"]:
                     for a,step_size in enumerate( self.optimizer.state['step_sizes']):

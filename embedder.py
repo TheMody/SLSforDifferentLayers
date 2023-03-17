@@ -95,6 +95,8 @@ class NLP_embedder(nn.Module):
             else:
                 if args.opts["opt"] == "adam":    
                     self.optimizer = optim.Adam(self.parameters(), lr=args.opts["lr"] )
+                if args.opts["opt"] == "radam":    
+                    self.optimizer = optim.RAdam(self.parameters(), lr=args.opts["lr"] )
                 if args.opts["opt"] == "sgd":    
                     self.optimizer = optim.SGD(self.parameters(), lr=args.opts["lr"] )
                 if args.opts["opt"] == "adamsls":    
