@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import torchvision
 import math
 import time
 import numpy as np
@@ -18,9 +19,6 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 from transformers import ResNetModel
 
-
-
-
 class Image_classifier(nn.Module):
 
     def __init__(self,  num_classes, batch_size, args):
@@ -32,11 +30,11 @@ class Image_classifier(nn.Module):
         #self.model = ResNetModel.from_pretrained("microsoft/resnet-34")
         configuration = ResNetConfig(layer_type = "basic", hidden_sizes=[64, 128, 256, 512], depths = [3, 4, 6, 3])
         self.model = ResNetModel(configuration)
+      #  self.preprocess_func = self.feature_extractor.preprocess
         # for name,param in self.model.named_parameters():
         #     print(name)
         #out shape is (1,2048,7,7)
         self.fc1 = nn.Linear(512,self.num_classes)
-        self.pool = torch.nn.AvgPool2d(7)
         self.criterion = nn.CrossEntropyLoss()
         
 
@@ -81,21 +79,24 @@ class Image_classifier(nn.Module):
             if args.opts["opt"] == "sgd":    
                 self.optimizer = optim.SGD(self.parameters(), lr=args.opts["lr"] )
             if args.opts["opt"] == "oladamsls":    
-                self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] , c = self.args.c*0.3, smooth = False )
+                self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] , c = 0.1, smooth = False )
             if args.opts["opt"] == "adamsls":    
-                self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] ,strategy = args.update_rule, combine_threshold = args.combine, c = self.args.c )
+                self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] ,strategy = args.update_rule, combine_threshold = args.combine, c = self.args.c , beta_s = args.beta)
             if args.opts["opt"] == "sgdsls":    
-                self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]],strategy = args.update_rule, combine_threshold = args.combine, base_opt = "scalar",gv_option = "scalar", c = self.args.c  )
+                self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]],strategy = args.update_rule, combine_threshold = args.combine, base_opt = "scalar",gv_option = "scalar", c = self.args.c , beta_s = args.beta )
 
     def forward(self,x):
-        x = self.model(**x).last_hidden_state
-        x = self.pool(x).squeeze()
+        x = self.model(x).last_hidden_state
+   #     print(x.shape)
+        mean = x.shape[2]*x.shape[3]
+        x = torch.sum(x, dim = [2,3])/mean
+        #x = self.pool(x).squeeze()
         return self.fc1(x)
 
-    def fit(self,data, epochs, eval_ds = None, labelname = "label", dataname = "img"):
+    def fit(self,data, epochs, eval_ds = None):
         wandb.init(project="SLSforDifferentLayersImage"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
         "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth, entity="pkenneweg", 
-        group = "resnet"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule + str(self.args.combine)+"_c"+ str(self.args.c) )
+        group = "testresnet"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule + str(self.args.combine)+"_c"+ str(self.args.c)+"_beta"+ str(self.args.beta) )
         
         self.mode = "cls"
         if not "sls" in self.args.opts["opt"]:
@@ -109,12 +110,9 @@ class Image_classifier(nn.Module):
         accsteps = 0
         accloss = 0
         for e in range(epochs):
-            for index in range(0,len(data), self.batch_size):
+            for index in range(len(data)):
                 startsteptime = time.time()
-                batch_x = data[index:index+self.batch_size][dataname]
-                
-                batch_y = torch.LongTensor(data[index:index+self.batch_size][labelname]).to(device)
-                batch_x = self.feature_extractor(batch_x, return_tensors="pt").to(device)
+                batch_x, batch_y = next(iter(data))
 
                 if "sls" in self.args.opts["opt"]:
                     closure = lambda : self.criterion(self(batch_x), batch_y)
@@ -141,25 +139,23 @@ class Image_classifier(nn.Module):
                 wandb.log(dict)
                 accloss = accloss + loss.item()
                 accsteps += 1
-                if index % np.max((1,int((len(data)/self.batch_size)*0.1))) == 0:
-                    print(index, accloss/ accsteps)
+                if index % np.max((1,int((len(data))*0.1))) == 0:
+                    print(index*self.batch_size, accloss/ accsteps)
                     accsteps = 0
                     accloss = 0
             if not eval_ds == None:
-                accuracy = self.evaluate(eval_ds, labelname = labelname, dataname = dataname)
+                accuracy = self.evaluate(eval_ds)
                 print("accuracy at epoch", e, accuracy)
                 wandb.log({"accuracy": accuracy})
         wandb.finish()
         return accuracy
 
     @torch.no_grad()
-    def evaluate(self, data, labelname = "label", dataname = "img"):
+    def evaluate(self, data):
         resultx = None
         acc = 0
         for i in range(0,len(data), self.batch_size):
-            batch_x = data[i:i+self.batch_size][dataname]
-            batch_y = torch.LongTensor(data[i:i+self.batch_size][labelname]).to(device)
-            batch_x = self.feature_extractor(batch_x, return_tensors="pt").to(device)
+            batch_x, batch_y = next(iter(data))
             batch_x = self(batch_x)
             y_pred = torch.argmax(batch_x, dim = 1)
             accuracy = torch.sum(batch_y == y_pred)

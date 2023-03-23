@@ -13,7 +13,7 @@ batch_size = [32]
 cs = [1.5]
 betas = [0.99]
 
-def create_config(name, ds, split, n_opt, model, opt, update_r = "cycle", i = 0, combine = 0, batch_size = 32, c = 0.1, cls = "transformer", beta = 0.9):
+def create_config(name, ds, split, n_opt, model, opt, update_r = "cycle", i = 0, combine = 0, batch_size = 32, c = 0.1, cls = "transformer", beta = 0.99):
     with open(name, 'w') as f:
             f.write("[DEFAULT]\n")
             f.write("batch_size = "+ str(batch_size) +"\n")

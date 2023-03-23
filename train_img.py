@@ -3,6 +3,8 @@ from datasets import load_dataset
 from image_classifier import Image_classifier
 from dense_classifier import Dense_classifier
 import torch
+from torch.utils.data import DataLoader
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def train_img(args,config):
     max_epochs = int(config["DEFAULT"]["epochs"])
@@ -24,9 +26,19 @@ def train_img(args,config):
     args.savepth = config["DEFAULT"]["directory"]
     args.combine = float(config["DEFAULT"]["combine"])
     args.c = float(config["DEFAULT"]["c"])
+    args.beta = float(config["DEFAULT"]["beta"])
     args.hidden_dims = int(config["DEFAULT"]["num_hidden_dims"])
     cls = config["DEFAULT"]["cls"]
-    
+
+    valds_name = "test"
+    dataset_name = dataset
+    if dataset == "tiny-imagenet":
+      dataset_name = "Maysee/tiny-imagenet"
+      num_classes = 200
+      labelname = "label"
+      dataname = "image"
+      input_dim = 64*64*3
+      valds_name = "valid"
     if dataset == "cifar100":
       num_classes = 100
       labelname = "fine_label"
@@ -46,8 +58,15 @@ def train_img(args,config):
       img_cls = Dense_classifier(input_dim,256,num_classes,batch_size,args).to(device)
     else:
       img_cls = Image_classifier(num_classes,batch_size,args).to(device)
-    dataset = load_dataset(dataset)
-    img_cls.fit(dataset["train"],max_epochs, dataset["test"], labelname = labelname, dataname = dataname)
+    
+    dataset = load_dataset(dataset_name)
+    from data import SimpleDataset
+    train_data = SimpleDataset(dataset["train"],dataname,labelname )
+    val_data = SimpleDataset(dataset[valds_name],dataname,labelname )
+
+    train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+    val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=True)
+    img_cls.fit(train_dataloader,max_epochs,val_dataloader)
     # model predicts one of the 1000 ImageNet classes
     #predicted_label = logits.argmax(-1).item()
     #print(img_cls.model.config.id2label[predicted_label])

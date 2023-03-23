@@ -56,15 +56,17 @@ if __name__ == '__main__':
                         if not i == -1:
                             drawaccumulation(acc_loss,acc_steps, i)
                             legendlist.append( prev_group)
+                            print(run.group, np.mean([np.mean(a) for a in acc_loss]))
                         acc_loss = []
                         acc_accuracy = []
                         acc_steps =[]
                         prev_group = run.group
                         i = i +1
+                        
                     
-                    hist = run.scan_history(keys=["accuracy","_step"])
-                    histl = [row["accuracy"] for row in hist]
-                    hists = [a for a in range(len(histl))]
+                    hist = run.scan_history(keys=["loss","_step"])
+                    histl = [row["loss"] for row in hist]
+                    hists = [row["step"] for row in hist]
                     # hist = run.history()
                     # histl = hist["loss"]
                     # hists = hist["_step"]
@@ -73,6 +75,7 @@ if __name__ == '__main__':
 
                     print(hists)
                     print(histl)
+                   # print(acc_loss)
                     acc_loss.append(histl)
                     acc_steps.append(hists)
                  #   acc_accuracy.append( run.history()["accuracy"][run.history()["accuracy"].isnull() == False].to_numpy()) 

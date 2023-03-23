@@ -5,7 +5,7 @@ import tensorflow_datasets as tfds
 from sklearn.model_selection import train_test_split
 import numpy as np
 smallsize = 500
-
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 task_list = ["cola","colasmall","sst2", "sst2smallunbalanced","sst2small", "mrpcsmall", "mrpc", "qnli", "qnlismall", "mnli", "mnlismall"]#,"qnli"]
 def load_data(name="sst2"):
     
@@ -217,21 +217,29 @@ def load_wikiandbook(batch_size):
 
 
 from torch.utils.data import Dataset
+import torchvision
 
 class SimpleDataset(Dataset):
-    def __init__(self, X,y, transform=None, target_transform=None):
-        self.X = X
-        self.y = y
-        self.transform = transform
-        self.target_transform = target_transform
+    def __init__(self, data, dataname, labelname):
+        self.data = data
+        self.dataname = dataname
+        self.labelname = labelname
+        self.transforms = torchvision.transforms.ToTensor()
 
     def __len__(self):
-        return len(self.X)
+        return len(self.data)
 
     def __getitem__(self, idx):
-        
-        if self.transform:
-            self.X[idx] = self.transform(self.X[idx])
-        if self.target_transform:
-            self.y[idx] = self.target_transform(self.y[idx])
-        return self.X[idx] , self.y[idx]
+        batch_x = self.data[idx][self.dataname]
+        batch_x = self.transforms(batch_x)
+        if batch_x.shape[0] == 1:
+            batch_x = batch_x.squeeze()
+            batch_x = torch.stack([batch_x,batch_x,batch_x], axis = 0)
+        batch_x = torchvision.transforms.Resize((232), interpolation=torchvision.transforms.InterpolationMode.BILINEAR)(batch_x).to(device)
+        batch_x = torchvision.transforms.CenterCrop((224,224))(batch_x)
+        batch_x = batch_x/255.0
+        batch_x = torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))(batch_x)
+        batch_y = torch.LongTensor([self.data[idx][self.labelname]]).squeeze().to(device)
+        return batch_x ,batch_y
+
+

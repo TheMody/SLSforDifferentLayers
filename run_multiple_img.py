@@ -1,21 +1,22 @@
 
 from main import main
 
-datasets = [ "cifar10"]  # ["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall","sst2","mrpc" ,"cola", "qnli","mnli"]#[ ]#,"mnli"]
+datasets = [ "tiny-imagenet"]#"tiny-imagenet"]  # ["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall","sst2","mrpc" ,"cola", "qnli","mnli"]#[ ]#,"mnli"]
 split_by = ["layer"]#"layer","qkv",
 n_opts = [1]
 models = ["bert"]#, "roberta"]
 update_rule = ["cycle"]#"cycle",  "impact_mag"
-optim = ["adamsls", "oladamsls", "adam", "sgd"]#["oladamsls", "adamsls","adam"]#, "sgd", "sgdsls"]"adam", 
+optim = ["adamsls", "adam", "sgd"]#["oladamsls", "adamsls","adam"]#, "sgd", "sgdsls"]"adam", 
 combine = [ 0]
 numexp = 3
 batch_size = [32]
-cs = [0.3]
+cs = [0.5]
 epochs = [20]
-clss = ["cnn", "dense"]
+clss = ["cnn"]
 n_hidden =[2] #[1,4,16,32]
+betas = [0.99]
 
-def create_config(name, ds, split, n_opt, model, opt, update_r = "cycle", i = 0, combine = 0, batch_size = 32, c = 0.1, epochs = 5, cls = "cnn", n_hid = 1):
+def create_config(name, ds, split, n_opt, model, opt, update_r = "cycle", i = 0, combine = 0, batch_size = 32, c = 0.1, epochs = 5, cls = "cnn", n_hid = 1, beta = 0.99):
     with open(name, 'w') as f:
             f.write("[DEFAULT]\n")
             f.write("batch_size = "+ str(batch_size) +"\n")
@@ -34,6 +35,7 @@ def create_config(name, ds, split, n_opt, model, opt, update_r = "cycle", i = 0,
             f.write("cls = " + cls + "\n")
             f.write("type = " + "img" + "\n")
             f.write("num_hidden_dims = " + str(n_hid) + "\n")
+            f.write("beta = " + str(beta) + "\n")
             
    # print("results/"  +ds + opt+ str(n_opt) + model + split )
     main(name)
@@ -46,17 +48,18 @@ for ds in datasets:
                     for cls in clss:
                         for bs in batch_size:
                             if "adamsls" in opt:
-                                for update_r in update_rule:
-                                    for split in split_by:
-                                        if split == "layer":
-                                            for n_opt in n_opts:
-                                                for comb in combine:
-                                                        for c in cs:
-                                                            for i in range(numexp):
-                                                                create_config("config_gen.json", ds, split, n_opt, model , opt, update_r, i,combine = comb, batch_size = bs, c = c,n_hid= n_hid, epochs = e, cls = cls)
-                                        else:
-                                            for i in range(numexp):
-                                                create_config("config_gen.json", ds, split, 1, model , opt, update_r, i,  batch_size = bs, epochs = e, cls = cls,n_hid= n_hid)
+                                for beta in betas:
+                                    for update_r in update_rule:
+                                        for split in split_by:
+                                            if split == "layer":
+                                                for n_opt in n_opts:
+                                                    for comb in combine:
+                                                            for c in cs:
+                                                                for i in range(numexp):
+                                                                    create_config("config_gen.json", ds, split, n_opt, model , opt, update_r, i,combine = comb, batch_size = bs, c = c,n_hid= n_hid, epochs = e, cls = cls, beta= beta)
+                                            else:
+                                                for i in range(numexp):
+                                                    create_config("config_gen.json", ds, split, 1, model , opt, update_r, i,  batch_size = bs, epochs = e, cls = cls,n_hid= n_hid, beta= beta)
                             else:
                                 for i in range(numexp):
                                     create_config("config_gen.json", ds, "layer", 1, model , opt,"cycle", i,  batch_size = bs, epochs = e, cls = cls,n_hid= n_hid)

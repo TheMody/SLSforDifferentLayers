@@ -1,19 +1,9 @@
 import torch
-import torch.nn as nn
 
 import numpy as np
 import random
-import math
 from embedder import NLP_embedder
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-import torch
-from sklearn.model_selection import ShuffleSplit
-from sklearn.model_selection import cross_val_score
-from sklearn.cluster import KMeans
-import time
 from data import load_data, SimpleDataset, load_wiki, load_wikiandbook
-from torch.utils.data import DataLoader
 # Fixing seed for reproducibility
 SEED = 999
 random.seed(SEED)
