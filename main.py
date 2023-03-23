@@ -7,7 +7,10 @@ import shutil
 import sys
 from train import train
 from train_img import train_img
+import torch
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 
 def main(config_file = None):
     if config_file == None:
@@ -29,6 +32,7 @@ def main(config_file = None):
     config = configparser.ConfigParser()
     config.sections()
     config.read(config_file)
+    print("device is", device)
     if config["DEFAULT"]["directory"] == "default":
         config["DEFAULT"]["directory"] = "results/" + dt.datetime.now().strftime("%d.%m.%Y_%H.%M.%S")
     

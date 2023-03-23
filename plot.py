@@ -12,6 +12,21 @@ import wandb
 
 def smoothing(list, length = 20):
     return [np.mean(list[max(i-length, 0 ): i]) for i in range(len(list))]
+
+def exp_smoothing(list, beta = 0.99):
+    smoothed = []
+    for i in range(len(list)):
+        if i == 0:
+            smoothed.append(list[i])
+        else:
+            smoothed.append(beta*smoothed[i-1] + (1-beta)*list[i])
+    return smoothed
+
+def decrease_per_epoch(list, epochs = 5):
+    length = len(list)
+    print(length)
+    decrease_list = [list[int(i*length/epochs)] - list[int((i+1)*length/epochs)] for i in range(epochs)]
+    return decrease_list
     
 if __name__ == '__main__': 
     api = wandb.Api()
@@ -54,9 +69,17 @@ if __name__ == '__main__':
                     print(run.name)
                     if not run.group == prev_group:
                         if not i == -1:
-                            drawaccumulation(acc_loss,acc_steps, i)
-                            legendlist.append( prev_group)
-                            print(run.group, np.mean([np.mean(a) for a in acc_loss]))
+                          #  drawaccumulation(acc_loss,acc_steps, i)
+                           # legendlist.append( prev_group)
+                            acc_loss = np.asarray(acc_loss)
+                            acc_loss_mean = np.mean(acc_loss, axis = 0)
+                            acc_loss_mean = exp_smoothing(acc_loss_mean)
+                            decreases = decrease_per_epoch(acc_loss_mean)
+                            print(decreases)
+                            decreases = np.log(decreases)
+                            print("log",decreases)
+                            print("mean",np.mean(decreases))
+                         #   print(run.group, np.mean([np.mean(a) for a in acc_loss]))
                         acc_loss = []
                         acc_accuracy = []
                         acc_steps =[]
@@ -65,19 +88,19 @@ if __name__ == '__main__':
                         
                     
                     hist = run.scan_history(keys=["loss","_step"])
-                    histl = [row["loss"] for row in hist]
-                    hists = [row["step"] for row in hist]
+                    histl = np.asarray([row["loss"] for row in hist])
+                  #  hists = [row["_step"] for row in hist]
                     # hist = run.history()
                     # histl = hist["loss"]
                     # hists = hist["_step"]
                     # hists = hists[histl.isnull() == False]
                     # histl = histl[histl.isnull() == False]
 
-                    print(hists)
-                    print(histl)
+                   # print(len(hists))
+                   # print(len(histl))
                    # print(acc_loss)
                     acc_loss.append(histl)
-                    acc_steps.append(hists)
+                   # acc_steps.append(hists)
                  #   acc_accuracy.append( run.history()["accuracy"][run.history()["accuracy"].isnull() == False].to_numpy()) 
     drawaccumulation(acc_loss,acc_steps, i)
     legendlist.append( prev_group)
