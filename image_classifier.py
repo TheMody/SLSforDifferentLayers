@@ -26,9 +26,9 @@ class Image_classifier(nn.Module):
         self.batch_size = batch_size
         self.num_classes = num_classes
         self.args = args
-        self.feature_extractor = AutoFeatureExtractor.from_pretrained("microsoft/resnet-50")
+       # self.feature_extractor = AutoFeatureExtractor.from_pretrained("microsoft/resnet-50")
         #self.model = ResNetModel.from_pretrained("microsoft/resnet-34")
-        configuration = ResNetConfig(layer_type = "basic", hidden_sizes=[64, 128, 256, 512], depths = [3, 4, 6, 3])
+        configuration = ResNetConfig(layer_type = "basic", hidden_sizes=[64, 128, 256, 512], depths = [3, 4, 6, 3]) #this is resnet 34
         self.model = ResNetModel(configuration)
       #  self.preprocess_func = self.feature_extractor.preprocess
         # for name,param in self.model.named_parameters():
@@ -101,8 +101,8 @@ class Image_classifier(nn.Module):
         self.mode = "cls"
         if not "sls" in self.args.opts["opt"]:
             self.scheduler = CosineWarmupScheduler(optimizer= self.optimizer, 
-                                                warmup = math.ceil(len(data)*epochs *0.1 / self.batch_size) ,
-                                                    max_iters = math.ceil(len(data)*epochs  / self.batch_size))
+                                                warmup = math.ceil(len(data)*epochs *0.1 ) ,
+                                                    max_iters = math.ceil(len(data)*epochs  ))
 
 
 

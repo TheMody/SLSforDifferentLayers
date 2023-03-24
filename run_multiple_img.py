@@ -6,7 +6,7 @@ split_by = ["layer"]#"layer","qkv",
 n_opts = [1]
 models = ["bert"]#, "roberta"]
 update_rule = ["cycle"]#"cycle",  "impact_mag"
-optim = ["adamsls", "adam", "sgd"]#["oladamsls", "adamsls","adam"]#, "sgd", "sgdsls"]"adam", 
+optim = [ "adam"]#["oladamsls", "adamsls","adam"]#, "sgd", "sgdsls"]"adam", 
 combine = [ 0]
 numexp = 3
 batch_size = [32]
@@ -47,7 +47,7 @@ for ds in datasets:
                 for n_hid in n_hidden:
                     for cls in clss:
                         for bs in batch_size:
-                            if "adamsls" in opt:
+                            if "sls" in opt:
                                 for beta in betas:
                                     for update_r in update_rule:
                                         for split in split_by:
