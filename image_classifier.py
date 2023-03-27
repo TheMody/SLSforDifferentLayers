@@ -134,8 +134,7 @@ class Image_classifier(nn.Module):
                         dict["avg_grad_norm"+str(a)] = self.optimizer.state["grad_norm_avg"][a]
                         dict["loss_decrease"+str(a)] = self.optimizer.state["loss_dec_avg"][a]
                 else:
-                    if self.args.opts["opt"] == "adam":
-                        dict["step_size"+str(0)] = self.scheduler.get_last_lr()[0]
+                    dict["step_size"+str(0)] = self.scheduler.get_last_lr()[0]
                 wandb.log(dict)
                 accloss = accloss + loss.item()
                 accsteps += 1
