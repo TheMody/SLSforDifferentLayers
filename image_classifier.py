@@ -28,6 +28,10 @@ class Image_classifier(nn.Module):
         self.args = args
        # self.feature_extractor = AutoFeatureExtractor.from_pretrained("microsoft/resnet-50")
         #self.model = ResNetModel.from_pretrained("microsoft/resnet-34")
+        if args.model == "preeffNet":
+        #    configuration = EfficientNetConfig()
+            self.model = EfficientNetModel.from_pretrained("google/efficientnet-b7")
+            out_shape = 768
         if args.model == "effNet":
             configuration = EfficientNetConfig()
             self.model = EfficientNetModel(configuration)
@@ -36,6 +40,12 @@ class Image_classifier(nn.Module):
             configuration = ResNetConfig(layer_type = "basic", hidden_sizes=[64, 128, 256, 512], depths = [3, 4, 6, 3]) #this is resnet 34
             self.model = ResNetModel(configuration)
             out_shape = 512
+        if args.model == "preresNet34":
+            self.model =  ResNetModel.from_pretrained("microsoft/resnet-50")
+            out_shape = 512
+        if args.model == "preresNet50":
+            self.model =  ResNetModel.from_pretrained("microsoft/resnet-50")
+            out_shape = 2048
       #  self.preprocess_func = self.feature_extractor.preprocess
         # for name,param in self.model.named_parameters():
         #     print(name)
