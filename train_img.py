@@ -32,6 +32,7 @@ def train_img(args,config):
 
     valds_name = "test"
     dataset_name = dataset
+    resize = True
     if dataset == "tiny-imagenet":
       dataset_name = "Maysee/tiny-imagenet"
       num_classes = 200
@@ -50,6 +51,7 @@ def train_img(args,config):
       dataname = "img"
       input_dim = 32*32*3
     if dataset == "mnist":
+      resize = False
       num_classes = 10
       labelname = "label"
       dataname = "image"
@@ -61,12 +63,9 @@ def train_img(args,config):
     
     dataset = load_dataset(dataset_name)
     from data import SimpleDataset
-    train_data = SimpleDataset(dataset["train"],dataname,labelname )
-    val_data = SimpleDataset(dataset[valds_name],dataname,labelname )
+    train_data = SimpleDataset(dataset["train"],dataname,labelname, resize = resize )
+    val_data = SimpleDataset(dataset[valds_name],dataname,labelname , resize = resize)
 
     train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
     val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=True)
     img_cls.fit(train_dataloader,max_epochs,val_dataloader)
-    # model predicts one of the 1000 ImageNet classes
-    #predicted_label = logits.argmax(-1).item()
-    #print(img_cls.model.config.id2label[predicted_label])

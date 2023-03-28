@@ -1,4 +1,4 @@
-from transformers import AutoFeatureExtractor, ResNetModel, ResNetConfig
+from transformers import ResNetModel, ResNetConfig, EfficientNetConfig, EfficientNetModel
 from datasets import load_dataset
 import wandb
 import torch
@@ -28,13 +28,19 @@ class Image_classifier(nn.Module):
         self.args = args
        # self.feature_extractor = AutoFeatureExtractor.from_pretrained("microsoft/resnet-50")
         #self.model = ResNetModel.from_pretrained("microsoft/resnet-34")
-        configuration = ResNetConfig(layer_type = "basic", hidden_sizes=[64, 128, 256, 512], depths = [3, 4, 6, 3]) #this is resnet 34
-        self.model = ResNetModel(configuration)
+        if args.model == "effNet":
+            configuration = EfficientNetConfig()
+            self.model = EfficientNetModel(configuration)
+            out_shape = 2560
+        if args.model == "resNet34":
+            configuration = ResNetConfig(layer_type = "basic", hidden_sizes=[64, 128, 256, 512], depths = [3, 4, 6, 3]) #this is resnet 34
+            self.model = ResNetModel(configuration)
+            out_shape = 512
       #  self.preprocess_func = self.feature_extractor.preprocess
         # for name,param in self.model.named_parameters():
         #     print(name)
         #out shape is (1,2048,7,7)
-        self.fc1 = nn.Linear(512,self.num_classes)
+        self.fc1 = nn.Linear(out_shape,self.num_classes)
         self.criterion = nn.CrossEntropyLoss()
         
 
@@ -151,16 +157,15 @@ class Image_classifier(nn.Module):
 
     @torch.no_grad()
     def evaluate(self, data):
-        resultx = None
         acc = 0
-        for i in range(0,len(data), self.batch_size):
+        for _ in range(len(data)):
             batch_x, batch_y = next(iter(data))
             batch_x = self(batch_x)
             y_pred = torch.argmax(batch_x, dim = 1)
             accuracy = torch.sum(batch_y == y_pred)
             acc += accuracy
         
-        acc = acc.item()/len(data)
+        acc = acc.item()/(len(data)*self.batch_size)
         return acc
 
 

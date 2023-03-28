@@ -220,7 +220,8 @@ from torch.utils.data import Dataset
 import torchvision
 
 class SimpleDataset(Dataset):
-    def __init__(self, data, dataname, labelname):
+    def __init__(self, data, dataname, labelname, resize = True):
+        self.resize = resize
         self.data = data
         self.dataname = dataname
         self.labelname = labelname
@@ -232,13 +233,17 @@ class SimpleDataset(Dataset):
     def __getitem__(self, idx):
         batch_x = self.data[idx][self.dataname]
         batch_x = self.transforms(batch_x)
-        if batch_x.shape[0] == 1:
-            batch_x = batch_x.squeeze()
-            batch_x = torch.stack([batch_x,batch_x,batch_x], axis = 0)
-        batch_x = torchvision.transforms.Resize((232), interpolation=torchvision.transforms.InterpolationMode.BILINEAR)(batch_x).to(device)
-        batch_x = torchvision.transforms.CenterCrop((224,224))(batch_x)
-        batch_x = batch_x/255.0
-        batch_x = torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))(batch_x)
+        if self.resize:
+            if batch_x.shape[0] == 1:
+                batch_x = batch_x.squeeze()
+                batch_x = torch.stack([batch_x,batch_x,batch_x], axis = 0)
+            batch_x = torchvision.transforms.Resize((232), interpolation=torchvision.transforms.InterpolationMode.BILINEAR)(batch_x).to(device)
+            batch_x = torchvision.transforms.CenterCrop((224,224))(batch_x)
+            batch_x = batch_x/255.0
+            batch_x = torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))(batch_x)
+        else:
+            batch_x = batch_x.float().to(device)/255.0
+           # batch_x = torchvision.transforms.Normalize((0.485), (0.225))(batch_x)
         batch_y = torch.LongTensor([self.data[idx][self.labelname]]).squeeze().to(device)
         return batch_x ,batch_y
 

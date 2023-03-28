@@ -55,7 +55,7 @@ class Dense_classifier(nn.Module):
         x = self.fc4(x)
         return x
 
-    def fit(self,data, epochs, eval_ds = None, labelname = "label", dataname = "img"):
+    def fit(self,data, epochs, eval_ds = None):
         wandb.init(project="SLSforDifferentLayersImage"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
         "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth, entity="pkenneweg", 
         group = "dense_"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule + str(self.args.combine)+"_c"+ str(self.args.c)+ "n_hid_"+ str(self.args.hidden_dims) )
@@ -68,8 +68,8 @@ class Dense_classifier(nn.Module):
         self.mode = "cls"
         if not "sls" in self.args.opts["opt"]:
             self.scheduler = CosineWarmupScheduler(optimizer= self.optimizer, 
-                                                warmup = math.ceil(len(data)*epochs *0.1 / self.batch_size) ,
-                                                    max_iters = math.ceil(len(data)*epochs  / self.batch_size))
+                                                warmup = math.ceil(len(data)*epochs *0.1) ,
+                                                    max_iters = math.ceil(len(data)*epochs ))
 
 
 
@@ -77,13 +77,11 @@ class Dense_classifier(nn.Module):
         accsteps = 0
         accloss = 0
         for e in range(epochs):
-            for index in range(0,len(data), self.batch_size):
+            for index in range(len(data)):
                 startsteptime = time.time()
-                batch_x = data[index:index+self.batch_size][dataname]
-                transform = transforms.Compose([transforms.PILToTensor()])
-                batch_x = torch.stack([transform(a) for a in batch_x]).float() / 255.0
-                batch_y = torch.LongTensor(data[index:index+self.batch_size][labelname]).to(device)
-                batch_x = batch_x.to(device)
+                batch_x, batch_y = next(iter(data))
+                # print(batch_y)
+                # print(self(batch_x))
 
                 if "sls" in self.args.opts["opt"]:
                     closure = lambda : self.criterion(self(batch_x), batch_y)
@@ -109,33 +107,28 @@ class Dense_classifier(nn.Module):
                 wandb.log(dict)
                 accloss = accloss + loss.item()
                 accsteps += 1
-                if index % np.max((1,int((len(data)/self.batch_size)*0.1))) == 0:
+                if index % np.max((1,int((len(data))*0.1))) == 0:
                     print(index, accloss/ accsteps)
                     accsteps = 0
                     accloss = 0
             if not eval_ds == None:
-                accuracy = self.evaluate(eval_ds, labelname = labelname, dataname = dataname)
+                accuracy = self.evaluate(eval_ds)
                 print("accuracy at epoch", e, accuracy)
                 wandb.log({"accuracy": accuracy})
         wandb.finish()
         return accuracy
 
     @torch.no_grad()
-    def evaluate(self, data, labelname = "label", dataname = "img"):
-        resultx = None
+    def evaluate(self, data):
         acc = 0
-        for i in range(0,len(data), self.batch_size):
-            batch_x = data[i:i+self.batch_size][dataname]
-            transform = transforms.Compose([transforms.PILToTensor()])
-            batch_x = torch.stack([transform(a) for a in batch_x]).float() / 255.0
-            batch_y = torch.LongTensor(data[i:i+self.batch_size][labelname]).to(device)
-            batch_x = batch_x.to(device)
+        for _ in range(len(data)):
+            batch_x, batch_y = next(iter(data))
             batch_x = self(batch_x)
             y_pred = torch.argmax(batch_x, dim = 1)
             accuracy = torch.sum(batch_y == y_pred)
             acc += accuracy
         
-        acc = acc.item()/len(data)
+        acc = acc.item()/(len(data)*self.batch_size)
         return acc
 
 
