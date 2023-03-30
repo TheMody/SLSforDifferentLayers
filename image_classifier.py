@@ -41,7 +41,7 @@ class Image_classifier(nn.Module):
             self.model = ResNetModel(configuration)
             out_shape = 512
         if args.model == "preresNet34":
-            self.model =  ResNetModel.from_pretrained("microsoft/resnet-50")
+            self.model =  ResNetModel.from_pretrained("microsoft/resnet-34")
             out_shape = 512
         if args.model == "preresNet50":
             self.model =  ResNetModel.from_pretrained("microsoft/resnet-50")

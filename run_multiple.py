@@ -1,16 +1,16 @@
 
 from main import main
 
-datasets = ["qnli", "sst2", "mnli"] #["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall",,"cola", "qnli","mnli"]#[ ]#,"mnli"]
+datasets = ["mrpc"] #["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall",,"cola", "qnli","mnli"]#[ ]#,"mnli"]
 split_by = ["layer"]#"layer","qkv",
-n_opts = [10]
+n_opts = [1]
 models = ["bert"]#, "roberta"]
 update_rule = ["cycle"]#"cycle",  "impact_mag"
 optim = [ "adamsls"]#,"adam", "sgdsls"]#, "sgd", "sgdsls"]"adam", 
 combine = [0]
-numexp = 3
+numexp = 5
 batch_size = [32]
-cs = [1.5]
+cs = [0.5]
 betas = [0.99]
 
 def create_config(name, ds, split, n_opt, model, opt, update_r = "cycle", i = 0, combine = 0, batch_size = 32, c = 0.1, cls = "transformer", beta = 0.99):

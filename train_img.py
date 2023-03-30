@@ -56,15 +56,41 @@ def train_img(args,config):
       labelname = "label"
       dataname = "image"
       input_dim = 28*28*1
+    if dataset == "electric":
+      num_classes = 2
+      input_dim = 7
+      from data  import SimpleDataset_electric
+      data = load_dataset("inria-soda/tabular-benchmark", data_files="clf_num/electricity.csv", split = "train[10%:90%]")
+      train_data = SimpleDataset_electric(data)
+      data = load_dataset("inria-soda/tabular-benchmark", data_files="clf_num/electricity.csv", split = "train[:10%]+train[90%:]")
+      val_data = SimpleDataset_electric(data)
+    if dataset == "covertype":
+      num_classes = 2
+      input_dim = 10
+      from data  import SimpleDataset_cover
+      data = load_dataset("inria-soda/tabular-benchmark", data_files="clf_num/covertype.csv", split = "train[10%:90%]")
+      train_data = SimpleDataset_cover(data)
+      data = load_dataset("inria-soda/tabular-benchmark", data_files="clf_num/covertype.csv", split = "train[:10%]+train[90%:]")
+      val_data = SimpleDataset_cover(data)
+    if dataset == "pol":
+      num_classes = 2
+      input_dim = 26
+      from data  import SimpleDataset_pol
+      data = load_dataset("inria-soda/tabular-benchmark", data_files="clf_num/pol.csv", split = "train[10%:90%]")
+      train_data = SimpleDataset_pol(data)
+      data = load_dataset("inria-soda/tabular-benchmark", data_files="clf_num/pol.csv", split = "train[:10%]+train[90%:]")
+      val_data = SimpleDataset_pol(data)
+
     if cls == "dense":
       img_cls = Dense_classifier(input_dim,256,num_classes,batch_size,args).to(device)
     else:
       img_cls = Image_classifier(num_classes,batch_size,args).to(device)
     
-    dataset = load_dataset(dataset_name)
-    from data import SimpleDataset
-    train_data = SimpleDataset(dataset["train"],dataname,labelname, resize = resize )
-    val_data = SimpleDataset(dataset[valds_name],dataname,labelname , resize = resize)
+    if train_data == None:
+      dataset = load_dataset(dataset_name)
+      from data import SimpleDataset
+      train_data = SimpleDataset(dataset["train"],dataname,labelname, resize = resize )
+      val_data = SimpleDataset(dataset[valds_name],dataname,labelname , resize = resize)
 
     train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
     val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=True)
