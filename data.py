@@ -247,4 +247,59 @@ class SimpleDataset(Dataset):
         batch_y = torch.LongTensor([self.data[idx][self.labelname]]).squeeze().to(device)
         return batch_x ,batch_y
 
+from datasets import load_dataset
+class SimpleDataset_electric(Dataset):
+    def __init__(self, data):
+        self.data = data 
+        self.categorical = ["DOWN", "UP"]
 
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        batch_y = self.data[idx]["class"]
+        batch_y = 1 if batch_y == self.categorical[0] else 0
+        batch_x = self.data[idx]
+        del batch_x["class"]
+        batch_x = np.asarray(list(batch_x.values()))
+        batch_x = torch.FloatTensor(batch_x).to(device)
+        batch_y = torch.LongTensor([batch_y]).squeeze().to(device)
+        return batch_x ,batch_y
+
+class SimpleDataset_cover(Dataset):
+    def __init__(self, data):
+        self.data = data 
+        self.categorical = [1, 0]
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        batch_y = self.data[idx]["Y"]
+        batch_y = 1 if batch_y == self.categorical[0] else 0
+        batch_x = self.data[idx]
+        del batch_x["Y"]
+        batch_x = np.asarray(list(batch_x.values()))
+        batch_x = torch.FloatTensor(batch_x).to(device)
+        batch_y = torch.LongTensor([batch_y]).squeeze().to(device)
+        return batch_x ,batch_y
+
+class SimpleDataset_pol(Dataset):
+    def __init__(self, data):
+        self.data = data 
+        self.categorical = ['P', 'N']
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+       # print(self.data[idx])
+        batch_y = self.data[idx]["binaryClass"]
+        batch_y = 1 if batch_y == self.categorical[0] else 0
+        batch_x = self.data[idx]
+        del batch_x["binaryClass"]
+        batch_x = np.asarray(list(batch_x.values()))
+        batch_x = torch.FloatTensor(batch_x).to(device)
+        batch_y = torch.LongTensor([batch_y]).squeeze().to(device)
+      #  print(batch_x, batch_y)
+        return batch_x ,batch_y

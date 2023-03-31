@@ -58,20 +58,13 @@ class Dense_classifier(nn.Module):
     def fit(self,data, epochs, eval_ds = None):
         wandb.init(project="SLSforDifferentLayersImage"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
         "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth, entity="pkenneweg", 
-        group = "dense_"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule + str(self.args.combine)+"_c"+ str(self.args.c)+ "n_hid_"+ str(self.args.hidden_dims) )
-       # wandb.watch(self)
-        # wandb.init(project="SLSforDifferentLayersImage"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
-        # "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth, entity="pkenneweg", 
-        # group = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) )
-        # wandb.watch(self)
+        group = "dense_"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + 
+        str(self.args.number_of_diff_lrs) + self.args.update_rule + str(self.args.combine)+"_c"+ str(self.args.c)+ "n_hid_"+ str(self.args.hidden_dims) )
         
-        self.mode = "cls"
         if not "sls" in self.args.opts["opt"]:
             self.scheduler = CosineWarmupScheduler(optimizer= self.optimizer, 
                                                 warmup = math.ceil(len(data)*epochs *0.1) ,
                                                     max_iters = math.ceil(len(data)*epochs ))
-
-
 
         accuracy = None
         accsteps = 0
