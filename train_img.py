@@ -12,7 +12,7 @@ def train_img(args,config):
     batch_size = int(config["DEFAULT"]["batch_size"])
 
     dataset = config["DEFAULT"]["dataset"]
-
+    train_data = None
     args.number_of_diff_lrs = int(config["DEFAULT"]["num_diff_opt"])
     if config["DEFAULT"]["optim"] == "sgd":
       lr = 1e-1
