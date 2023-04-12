@@ -39,6 +39,7 @@ def train(args, config):
     args.model = config["DEFAULT"]["model"]
     args.savepth = config["DEFAULT"]["directory"]
     args.c = float(config["DEFAULT"]["c"])
+    args.o_grad_smooth = config["DEFAULT"]["onlygradientsmoothing"]=="True"
     num_classes = 2
     if "mnli" in dataset:
         num_classes = 3

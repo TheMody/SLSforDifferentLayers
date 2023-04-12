@@ -30,7 +30,8 @@ class AdamSLS(StochLineSearchBase):
                  combine_threshold = 0,
                  smooth = True,
                  bs_scale = True,
-                 batch_size = 32.0):
+                 batch_size = 32.0,
+                 o_grad_smooth = False):
         params = list(params)
         super().__init__(params,
                          n_batches_per_epoch=n_batches_per_epoch,
@@ -54,6 +55,7 @@ class AdamSLS(StochLineSearchBase):
         self.beta_s = beta_s
         self.reset_option = reset_option
         self.combine_threshold = combine_threshold
+        self.o_grad_smooth = o_grad_smooth
 
         # others
         self.strategy = strategy
@@ -171,15 +173,10 @@ class AdamSLS(StochLineSearchBase):
 
         # compute step size and execute step
         # =================
-     #   print(self.at_step)
         for i in range(len(self.avg_gradient_norm)):
-            # print(i)
-            # print("self.avg_gradient_norm[i]",self.avg_gradient_norm[i])
-            # print("self.avg_decrease[i]",self.avg_decrease[i])
             if i == self.nextcycle:
                 self.avg_gradient_norm[i] = self.avg_gradient_norm[i] * self.beta_s + (pp_norm[i]) *(1-self.beta_s)
         self.pp_norm = pp_norm
-        #    self.avg_gradient_norm_scaled[i] = self.avg_gradient_norm[i]/(1-self.beta)**(self.state['step']+1)
         if self.first_step:
             step_size, loss_next = self.line_search(-1,step_sizes[0], params_current, grad_current, loss, closure_deterministic,  precond=True)
             step_sizes = [step_size for i in range(len(step_sizes))]

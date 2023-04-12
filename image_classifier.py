@@ -96,6 +96,8 @@ class Image_classifier(nn.Module):
                 self.optimizer = optim.SGD(self.parameters(), lr=args.opts["lr"] )
             if args.opts["opt"] == "oladamsls":    
                 self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] , c = 0.1, smooth = False )
+            if args.opts["opt"] == "olsgdsls":    
+                self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] , c = 0.1, base_opt = "scalar",gv_option = "scalar", smooth = False)
             if args.opts["opt"] == "adamsls":    
                 self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] ,strategy = args.update_rule, combine_threshold = args.combine, c = self.args.c , beta_s = args.beta)
             if args.opts["opt"] == "sgdsls":    

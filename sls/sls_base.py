@@ -82,9 +82,10 @@ class StochLineSearchBase(torch.optim.Optimizer):
         with torch.no_grad():
 
             if self.first_step:
-                suff_dec = torch.sum(self.avg_gradient_norm)
+                suff_dec = torch.sum(self.avg_gradient_norm)/(1-self.beta_s**(self.state['step']+1))
             else:
-                suff_dec = self.avg_gradient_norm[i]
+                suff_dec = self.avg_gradient_norm[i]/(1-self.beta_s**(self.state['step']+1))
+          #  print("gradient_norm corrected",suff_dec)
             if loss.item() != 0 and suff_dec >= 1e-8:
                 # check if condition is satisfied
                 found = 0
@@ -105,7 +106,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
 
                     # compute the loss at the next step; no need to compute gradients.
                     loss_next = closure_deterministic()
-                    decrease= (self.avg_decrease[i] * self.beta_s + (loss-loss_next) *(1-self.beta_s) )#/((1-self.beta)**((self.state['step']+1)/len(self.avg_decrease)))
+                    decrease= (self.avg_decrease[i] * self.beta_s + (loss-loss_next) *(1-self.beta_s) )/(1-self.beta_s**(self.state['step']+1))
 
                     self.state['n_forwards'] += 1
 
@@ -113,13 +114,13 @@ class StochLineSearchBase(torch.optim.Optimizer):
                         found = 1
                         print("had cancelation error loss was equal no decrease necessary")
 
+                    if self.o_grad_smooth:
+                        decrease = loss-loss_next
                     if not self.smooth:
                         decrease = loss-loss_next
                         self.avg_decrease[i] = decrease
                         suff_dec = self.pp_norm[i]
                         self.avg_gradient_norm[i] = suff_dec
-                    # print("self.avg_decrease[i]", self.avg_decrease[i])
-                    # print("self.avg_gradient_norm[i]", self.avg_gradient_norm[i])
                     found, step_size = self.check_armijo_conditions(step_size=step_size,
                                                                     decrease=decrease,
                                                                     suff_dec=suff_dec,
@@ -129,11 +130,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
                        # if not self.first_step:
                         self.avg_decrease[i]  = self.avg_decrease[i] * self.beta_s + (loss-loss_next) *(1-self.beta_s) 
                         break
-              #  self.backtracks  = e
-                # if line search exceeds max_epochs
-                # if found == 0:
-                #    # step_size = torch.tensor(data=1e-10)
-                #     try_sgd_update(self.params[i], torch.Tensor(1e-7), params_current, grad_current)
+
 
                 self.state['backtracks'] += e
                 self.state['f_eval'].append(e)
@@ -149,10 +146,6 @@ class StochLineSearchBase(torch.optim.Optimizer):
 
     def check_armijo_conditions(self, step_size, decrease, suff_dec, c, beta_b):
         found = 0
-        # print("suff_dec", suff_dec)
-        # print("decrease", decrease)
-        # print("lr", decrease/(suff_dec*c))
-        # print("step size", step_size)
         sufficient_decrease = step_size * c * suff_dec
         if (decrease >= sufficient_decrease):
             found = 1
