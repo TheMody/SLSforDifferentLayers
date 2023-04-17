@@ -1,16 +1,16 @@
 
 from main import main
 
-datasets = ["mrpc"] #["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall",,"cola", "qnli","mnli"]#[ ]#,"mnli"]
+datasets = ["mrpc", "qnli", "mnli", "sst2"] #["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall",,"cola", "qnli","mnli"]#[ ]#,"mnli"]
 split_by = ["layer"]#"layer","qkv",
 n_opts = [1]
 models = ["bert"]#, "roberta"]
 update_rule = ["cycle"]#"cycle",  "impact_mag"
-optim = [ "adamsls"]#,"adam", "sgdsls"]#, "sgd", "sgdsls"]"adam", 
+optim = ["sgd", "sgdsls"]#,"adam", "sgdsls"]#, "sgd", "sgdsls"]"adam", 
 combine = [0]
 numexp = 5
 batch_size = [32]
-cs = [0.3]
+cs = [0.5]
 betas = [0.99]
 only_grad_smoothing = [False]
 

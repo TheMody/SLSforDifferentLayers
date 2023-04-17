@@ -27,7 +27,7 @@ def train(args, config):
 
 
     print("dataset:", dataset)
-    lr = 2e-5
+    lr = 1e-2
 
     args.number_of_diff_lrs = int(config["DEFAULT"]["num_diff_opt"])
     args.opts = {"lr": lr, "opt": optimizer}
