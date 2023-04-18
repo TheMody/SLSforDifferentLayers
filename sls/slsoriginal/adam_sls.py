@@ -120,7 +120,8 @@ class AdamSLS(StochLineSearchBase):
                 else:
                     raise ValueError('%s does not exist' % self.base_opt)
 
-        pp_norm, pp_norms = self.get_pp_norm(grad_current=grad_current)
+        if not self.base_opt == "scalar":
+            pp_norm, pp_norms = self.get_pp_norm(grad_current=grad_current)
         step_size = self.reset_step(step_size=self.state.get('step_size') or self.init_step_size,
                                     n_batches_per_epoch=self.n_batches_per_epoch,
                                     gamma=self.gamma,
@@ -162,6 +163,10 @@ class AdamSLS(StochLineSearchBase):
         if self.pp_norm_method in ['pp_armijo', "just_pp"]:
             pp_norm = 0
             pp_norms = []
+            # if self.gv_option in ['scalar']:
+            #     gvs = [self.state['gv'] for _ in range(len(grad_current))]
+            # else:
+            #     gvs = self.state['gv']
             for i, (g_i, gv_i) in enumerate(zip(grad_current, self.state['gv'])):
                 if self.base_opt in ['diag_hessian', 'diag_ggn_ex', 'diag_ggn_mc']:
                     pv_i = 1. / (gv_i+ 1e-8) # computing 1 / diagonal for using in the preconditioner

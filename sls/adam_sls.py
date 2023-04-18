@@ -161,7 +161,7 @@ class AdamSLS(StochLineSearchBase):
         # print("time for gv and mv calcs:", time.time()-start)
         # start = time.time()
         if self.base_opt == "scalar":
-            pp_norm = grad_norm
+            pp_norm = [g**2 for g in grad_norm]
         else:
             pp_norm =[self.get_pp_norm(g_cur,i) for i,g_cur in enumerate(grad_current)]
         step_sizes = self.state.get('step_sizes') or self.init_step_sizes

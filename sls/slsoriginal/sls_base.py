@@ -97,6 +97,9 @@ class StochLineSearchBase(torch.optim.Optimizer):
                     loss_next = closure_deterministic()
                     self.state['n_forwards'] += 1
 
+                    print( "decrease", loss-loss_next)
+                    print( "suff_dec", suff_dec)
+
                     if self.line_search_fn == "armijo":
                         found, step_size = self.check_armijo_conditions(step_size=step_size,
                                                                         loss=loss,
