@@ -45,7 +45,9 @@ class Dense_classifier(nn.Module):
         if args.opts["opt"] == "adamsls":    
             self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] ,strategy = args.update_rule, combine_threshold = args.combine, c = self.args.c )
         if args.opts["opt"] == "sgdsls":    
-            self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]],strategy = args.update_rule, combine_threshold = args.combine, base_opt = "scalar",gv_option = "scalar", c = self.args.c  )
+            self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]],strategy = args.update_rule, combine_threshold = args.combine, base_opt = "scalar",gv_option = "scalar", c = self.args.c , beta_s = args.beta )
+        # if args.opts["opt"] == "sgdsls":    
+        #     self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]],strategy = args.update_rule, combine_threshold = args.combine, base_opt = "scalar",gv_option = "scalar", c = self.args.c  )
         if args.opts["opt"] == "olsgdsls":    
             self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] , c = 0.1, base_opt = "scalar",gv_option = "scalar", smooth = False)
         # if args.opts["opt"] == "olsgdsls":    

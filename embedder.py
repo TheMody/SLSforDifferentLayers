@@ -143,7 +143,7 @@ class NLP_embedder(nn.Module):
     def fit(self, x, y, epochs=1, X_val= None,Y_val= None):
         wandb.init(project="SLSforDifferentLayers"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
             "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth, entity="pkenneweg", 
-            group = "avgarmijo_momentum_"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule 
+            group = "Only_dec"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule 
             + str(self.args.combine)+"bs"+ str(self.batch_size) +"c"+ str(self.args.c)+"beta"+ str(self.args.beta))
         #wandb.watch(self)
         
@@ -190,6 +190,8 @@ class NLP_embedder(nn.Module):
                             dict["step_size"+str(a)] = step_size
                             dict["avg_grad_norm"+str(a)] = self.optimizer.state["grad_norm_avg"][a]
                             dict["loss_decrease"+str(a)] = self.optimizer.state["loss_dec_avg"][a]
+                            dict["loss_decrease"] = self.optimizer.state["loss_decrease"]
+                            dict["gradient_norm"] = self.optimizer.state["gradient_norm"][a]
                     else:
                         dict["step_size"+str(0)] = self.scheduler.get_last_lr()[0]
                         #      print(dict["step_size"+str(a)])

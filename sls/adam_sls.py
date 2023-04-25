@@ -29,9 +29,8 @@ class AdamSLS(StochLineSearchBase):
                  line_search_fn="armijo",
                  combine_threshold = 0,
                  smooth = True,
-                 bs_scale = True,
-                 batch_size = 32.0,
-                 o_grad_smooth = False):
+                 smooth_after = 0,
+                 only_decrease = True):
         params = list(params)
         super().__init__(params,
                          n_batches_per_epoch=n_batches_per_epoch,
@@ -55,7 +54,10 @@ class AdamSLS(StochLineSearchBase):
         self.beta_s = beta_s
         self.reset_option = reset_option
         self.combine_threshold = combine_threshold
-        self.o_grad_smooth = o_grad_smooth
+        self.smooth_after = smooth_after
+        self.only_decrease = only_decrease
+        if not self.smooth_after == 0:
+            self.smooth = False
 
         # others
         self.strategy = strategy
@@ -77,8 +79,6 @@ class AdamSLS(StochLineSearchBase):
         self.at_step = 0
         self.first_step = True
         self.timescale = timescale
-        self.bs_scale = bs_scale
-        self.batch_size = batch_size
         # self.state['step_size'] = init_step_size
 
         self.avg_decrease = torch.zeros(len(params))#(0.0 for i in range(len(params))]
@@ -113,7 +113,7 @@ class AdamSLS(StochLineSearchBase):
         self.init_step_sizes = [self.init_step_sizes[0] for i in range(len(self.params))]
         
 
-    def step(self, closure):
+    def step(self, closure, closure_with_backward = None):
         # deterministic closure
         seed = time.time()
         start = time.time()
@@ -121,8 +121,11 @@ class AdamSLS(StochLineSearchBase):
             with random_seed_torch(int(seed)):
                 return closure()
 
-        loss = closure_deterministic()
-        loss.backward()
+        if closure_with_backward is not None:
+            loss = closure_with_backward()
+        else:
+            loss = closure_deterministic()
+            loss.backward()
         # print("time for backwards:", time.time()-start)
         # start = time.time()
         if self.clip_grad:
@@ -161,7 +164,7 @@ class AdamSLS(StochLineSearchBase):
         # print("time for gv and mv calcs:", time.time()-start)
         # start = time.time()
         if self.base_opt == "scalar":
-            pp_norm = [g**2 for g in grad_norm]
+            pp_norm = grad_norm
         else:
             pp_norm =[self.get_pp_norm(g_cur,i) for i,g_cur in enumerate(grad_current)]
         step_sizes = self.state.get('step_sizes') or self.init_step_sizes
@@ -173,10 +176,21 @@ class AdamSLS(StochLineSearchBase):
 
         # compute step size and execute step
         # =================
+     #   print(self.at_step)
         for i in range(len(self.avg_gradient_norm)):
+            # print(i)
+            # print("self.avg_gradient_norm[i]",self.avg_gradient_norm[i])
+            # print("self.avg_decrease[i]",self.avg_decrease[i])
             if i == self.nextcycle:
                 self.avg_gradient_norm[i] = self.avg_gradient_norm[i] * self.beta_s + (pp_norm[i]) *(1-self.beta_s)
+
+        self.state['gradient_norm'] =  [a.item() for a in pp_norm]
         self.pp_norm = pp_norm
+        #    self.avg_gradient_norm_scaled[i] = self.avg_gradient_norm[i]/(1-self.beta)**(self.state['step']+1)
+        if self.smooth == False and not self.smooth_after == 0:
+            if self.state['step'] > self.smooth_after:
+                self.smooth = True
+
         if self.first_step:
             step_size, loss_next = self.line_search(-1,step_sizes[0], params_current, grad_current, loss, closure_deterministic,  precond=True)
             step_sizes = [step_size for i in range(len(step_sizes))]
@@ -186,7 +200,7 @@ class AdamSLS(StochLineSearchBase):
                 self.first_step = False
                 for i in range(len(self.avg_gradient_norm)):
                     self.avg_gradient_norm[i] = self.avg_gradient_norm[0]
-                    self.avg_decrease[i] = self.avg_decrease[-1]
+                    self.avg_decrease[i] = self.avg_decrease[-1]   
         else:
             for i,step_size in enumerate(step_sizes):
                 if i == self.nextcycle:
