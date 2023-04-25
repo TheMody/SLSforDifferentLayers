@@ -1,7 +1,7 @@
 
 from main import main
 
-datasets = ["mrpc", "qnli", "mnli", "sst2"] #["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall",,"cola", "qnli","mnli"]#[ ]#,"mnli"]
+datasets = [ "sst2"] #["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall",,"cola", "qnli","mnli"]#[ ]#,"mnli"]
 split_by = ["layer"]#"layer","qkv",
 n_opts = [1]
 models = ["bert"]#, "roberta"]

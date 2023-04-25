@@ -1,8 +1,8 @@
 #!/bin/bash 
 #SBATCH --gres=gpu:1
-#SBATCH --time=24:00:00
-#SBATCH --job-name=SLSSGDmnist
-#SBATCH --output=SLSSGDmnist.log
+#SBATCH --time=96:00:00
+#SBATCH --job-name=SLSSGDtabularsmall
+#SBATCH --output=SLSSGDtabularsmall.log
 
 
 
