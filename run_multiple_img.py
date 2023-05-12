@@ -6,7 +6,11 @@ split_by = ["layer"]#"layer","qkv",
 n_opts = [1]
 models = [ "dense"]#, "roberta"]
 update_rule = ["cycle"]#"cycle",  "impact_mag"
+<<<<<<< HEAD
 optim = [ "sgd"]#["oladamsls", "adamsls","adam"]#, "sgd", "sgdsls"]"adam", 
+=======
+optim = [ "olsgdsls"]#["oladamsls", "adamsls","adam"]#, "sgd", "sgdsls"]"adam", 
+>>>>>>> 6ccb9a7939a63f9376d24ee2cadf9268a7777e26
 combine = [ 0]
 numexp = 5
 batch_size = [32]

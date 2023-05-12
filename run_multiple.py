@@ -1,12 +1,12 @@
 
 from main import main
 
-datasets = [ "sst2"] #["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall",,"cola", "qnli","mnli"]#[ ]#,"mnli"]
+datasets = ["qnli","mnli", "sst2"] #["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall",,"cola", "qnli","mnli"]#[ ]#,"mnli"]
 split_by = ["layer"]#"layer","qkv",
 n_opts = [1]
 models = ["bert"]#, "roberta"]
 update_rule = ["cycle"]#"cycle",  "impact_mag"
-optim = ["sgdsls", "olsgdsls"]#,"adam", "sgdsls"]#, "sgd", "sgdsls"]"adam", 
+optim = ["adamsls"]#,"adam", "sgdsls"]#, "sgd", "sgdsls"]"adam", 
 combine = [0]
 numexp = 5
 batch_size = [32]
