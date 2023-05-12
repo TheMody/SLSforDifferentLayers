@@ -22,7 +22,6 @@ class AdamSLS(StochLineSearchBase):
                  mom_type='standard',
                  clip_grad=False,
                  beta_b=0.9,
-                 beta_f=2.0,
                  beta_s = 0.999,
                  reset_option=1,
                  timescale = 0.05,
@@ -30,7 +29,7 @@ class AdamSLS(StochLineSearchBase):
                  combine_threshold = 0,
                  smooth = True,
                  smooth_after = 0,
-                 only_decrease = True):
+                 only_decrease = False):
         params = list(params)
         super().__init__(params,
                          n_batches_per_epoch=n_batches_per_epoch,
@@ -49,7 +48,6 @@ class AdamSLS(StochLineSearchBase):
 
         self.smooth = smooth
         # sls stuff
-        self.beta_f = beta_f
         self.beta_b = beta_b
         self.beta_s = beta_s
         self.reset_option = reset_option
@@ -157,6 +155,9 @@ class AdamSLS(StochLineSearchBase):
                     if self.base_opt == 'adam':
                         self.state['gv'][a][i] = (1-self.beta)*(g**2) + (self.beta) * self.state['gv'][a][i]
                         self.state['mv'][a][i] = (1-self.momentum)*g + (self.momentum) * self.state['mv'][a][i]
+                    if self.base_opt == 'lion':
+                       # self.state['gv'][a][i] = (1-self.beta)*(g**2) + (self.beta) * self.state['gv'][a][i]
+                        self.state['mv'][a][i] = (1-self.beta)*g + (self.beta) * self.state['mv'][a][i]
 
                     # else:
                     #     raise ValueError('%s does not exist' % self.base_opt)
@@ -241,12 +242,17 @@ class AdamSLS(StochLineSearchBase):
                 if self.base_opt == 'adam':
                     gv_i_scaled = scale_vector(gv_i, self.beta, self.state['step']+1)
                     pv_i = 1. / (torch.sqrt(gv_i_scaled) + 1e-8)
+                #    print(g_i.shape)
+                    if self.pp_norm_method == 'pp_armijo':
+                        layer_norm = ((g_i**2) * pv_i).sum()
+                    elif self.pp_norm_method == "just_pp":
+                        layer_norm = pv_i.sum()
+                elif self.base_opt == 'lion':
+                    #layer_norm = (torch.sign(g_i)).sum()
+                    return torch.Tensor([1])
+                  #  layer_norm = torch.Tensor([torch.numel(g_i)])
                 else:
                     raise ValueError('%s not found' % self.base_opt)
-                if self.pp_norm_method == 'pp_armijo':
-                    layer_norm = ((g_i**2) * pv_i).sum()
-                elif self.pp_norm_method == "just_pp":
-                    layer_norm = pv_i.sum()
                 pp_norm += layer_norm
               #  pp_norms.append(layer_norm.item())
 
@@ -282,12 +288,20 @@ class AdamSLS(StochLineSearchBase):
                         mv_i_scaled = g_current
                     elif self.mom_type == 'standard':
                         mv_i_scaled = scale_vector(mv_i, momentum, self.state['step']+1)
-
-                  #  print("p_current", p_current)
                     
                     p_next.data[:] = p_current.data
                     p_next.data.add_((pv_list *  mv_i_scaled), alpha=- step_size)
-                #    print("p_next", p_next)
+            elif self.base_opt == 'lion':
+                if i == -1:
+                    zipped = zip([item for sublist in params for item in sublist], [item for sublist in params_current for item in sublist], [item for sublist in grad_current for item in sublist], 
+                      [item for sublist in self.state['mv'] for item in sublist] )
+                else:
+                    zipped = zip(params, params_current, grad_current, self.state['mv'][i])
+                for p_next, p_current, g_current, mv_i in zipped:
+                    dk = torch.sign(momentum * mv_i + g_current * (1-momentum))
+                    p_next.data[:] = p_current.data
+                    p_next.data.add_(dk, alpha=- step_size)
+            
             
 
             else:

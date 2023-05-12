@@ -7,3 +7,5 @@ try 10 adamsls on transformer pre-training
 maybe try radam instead of adam
 TODO: find a use case for PLASLS, maybe image classification with resnet
 When taking a step in the future only take a step with the updated part of the network, freeze the rest
+
+5 runs * 6 optimizers * 12 datasets = ~ 100 days of compute on a A40 GPU

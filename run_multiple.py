@@ -6,12 +6,12 @@ split_by = ["layer"]#"layer","qkv",
 n_opts = [1]
 models = ["bert"]#, "roberta"]
 update_rule = ["cycle"]#"cycle",  "impact_mag"
-optim = ["adamsls"]#,"adam", "sgdsls"]#, "sgd", "sgdsls"]"adam", 
+optim = ["lionsls"]#,"adam", "sgdsls"]#, "sgd", "sgdsls"]"adam", "adamsls",
 combine = [0]
 numexp = 5
 batch_size = [32]
 cs = [0.3]
-betas = [0.99]
+betas = [0.999]
 
 def create_config(name, ds, split, n_opt, model, opt, update_r = "cycle", i = 0, combine = 0, batch_size = 32, c = 0.1, cls = "transformer", beta = 0.99, onlygradsmooth = False):
     with open(name, 'w') as f:
