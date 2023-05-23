@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader
 from data import load_wiki
 import os
 from sls.adam_sls import AdamSLS
+from sls.Ken_sls import KenSLS
 from sls.slsoriginal.adam_sls import AdamSLS as orAdamSLS
 import wandb
 from cosine_scheduler import CosineWarmupScheduler
@@ -102,6 +103,8 @@ class NLP_embedder(nn.Module):
                # if args.opts["opt"] == "lion":
                 if args.opts["opt"] == "adamsls":    
                     self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] , c = self.args.c, beta_s = self.args.beta)
+                if args.opts["opt"] == "kensls":    
+                    self.optimizer = KenSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] ,beta_s = self.args.beta)
                 if args.opts["opt"] == "lionsls":    
                     self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] , c = self.args.c, beta_s = self.args.beta, momentum=0.95, beta = 0.98, base_opt="lion")
                 if args.opts["opt"] == "oladamsls":    
@@ -191,10 +194,10 @@ class NLP_embedder(nn.Module):
                     if "sls" in  self.args.opts["opt"]:
                         for a,step_size in enumerate( self.optimizer.state['step_sizes']):
                             dict["step_size"+str(a)] = step_size
-                            dict["avg_grad_norm"+str(a)] = self.optimizer.state["grad_norm_avg"][a]
-                            dict["loss_decrease"+str(a)] = self.optimizer.state["loss_dec_avg"][a]
+                         #   dict["avg_grad_norm"+str(a)] = self.optimizer.state["grad_norm_avg"][a]
+                         #   dict["loss_decrease"+str(a)] = self.optimizer.state["loss_dec_avg"][a]
                             dict["loss_decrease"] = self.optimizer.state["loss_decrease"]
-                            dict["gradient_norm"] = self.optimizer.state["gradient_norm"][a]
+                      #      dict["gradient_norm"] = self.optimizer.state["gradient_norm"][a]
                     else:
                         dict["step_size"+str(0)] = self.scheduler.get_last_lr()[0]
                         #      print(dict["step_size"+str(a)])
