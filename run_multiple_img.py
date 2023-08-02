@@ -1,17 +1,17 @@
 
 from main import main
 
-datasets = ["tiny-imagenet"]  # ["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall","sst2","mrpc" ,"cola", "qnli","mnli"]#[ ]#,"mnli"]
+datasets = ["cifar10", "cifar100"]  # ["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall","sst2","mrpc" ,"cola", "qnli","mnli"]#[ ]#,"mnli"]
 split_by = ["layer"]#"layer","qkv",
 n_opts = [1]
-models = [ "effNet"]#, "roberta"]
+models = [ "resNet34"]#, "roberta"]
 update_rule = ["cycle"]#"cycle",  "impact_mag"
-optim = [ "adamsls"]#["oladamsls", "adamsls","adam"]#, "sgd", "sgdsls"]"adam", 
+optim = [ "adamsls", "adam", "sgdsls", "sgd", "oladamsls", "olsdgsls"]#["oladamsls", "adamsls","adam"]#, "sgd", "sgdsls"]"adam", 
 combine = [ 0]
-numexp = 5
+numexp = 1
 batch_size = [32]
 cs = [ 0.5]
-epochs = [20]
+epochs = [200]
 clss = ["cnn"]
 n_hidden =[2]
 betas = [0.99]

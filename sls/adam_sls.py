@@ -254,6 +254,7 @@ class AdamSLS(StochLineSearchBase):
                 else:
                     raise ValueError('%s not found' % self.base_opt)
                 pp_norm += layer_norm
+              #  pp_norm = torch.sqrt(pp_norm)
               #  pp_norms.append(layer_norm.item())
 
         else:

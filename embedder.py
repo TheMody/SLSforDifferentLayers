@@ -104,7 +104,7 @@ class NLP_embedder(nn.Module):
                 if args.opts["opt"] == "adamsls":    
                     self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] , c = self.args.c, beta_s = self.args.beta)
                 if args.opts["opt"] == "kensls":    
-                    self.optimizer = KenSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] ,beta_s = self.args.beta)
+                    self.optimizer = KenSLS( [param for name,param in self.named_parameters() if not "pooler" in name] ,beta_s = self.args.beta, c = self.args.c)
                 if args.opts["opt"] == "lionsls":    
                     self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] , c = self.args.c, beta_s = self.args.beta, momentum=0.95, beta = 0.98, base_opt="lion")
                 if args.opts["opt"] == "oladamsls":    
@@ -149,7 +149,7 @@ class NLP_embedder(nn.Module):
     def fit(self, x, y, epochs=1, X_val= None,Y_val= None):
         wandb.init(project="SLSforDifferentLayers"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
             "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth, entity="pkenneweg", 
-            group = "avgarmijo_momentum_"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule 
+            group = "kensls_"+ self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule 
             + str(self.args.combine)+"bs"+ str(self.batch_size) +"c"+ str(self.args.c)+"beta"+ str(self.args.beta))
         #wandb.watch(self)
         
@@ -192,12 +192,19 @@ class NLP_embedder(nn.Module):
                 if (i*self.batch_size) % 32 == 0:
                     dict = {"loss": loss.item() , "time_per_step":time.time()-startsteptime}#, "backtracks": np.sum(self.optimizer[a].state['n_backtr'][-1] for a in range(len(self.optimizer)))}
                     if "sls" in  self.args.opts["opt"]:
-                        for a,step_size in enumerate( self.optimizer.state['step_sizes']):
-                            dict["step_size"+str(a)] = step_size
-                         #   dict["avg_grad_norm"+str(a)] = self.optimizer.state["grad_norm_avg"][a]
-                         #   dict["loss_decrease"+str(a)] = self.optimizer.state["loss_dec_avg"][a]
+                        if "kensls" in self.args.opts["opt"]:
+                            dict["step_size0"] = self.optimizer.state["step_size"]
                             dict["loss_decrease"] = self.optimizer.state["loss_decrease"]
-                      #      dict["gradient_norm"] = self.optimizer.state["gradient_norm"][a]
+                            dict["gradient_norm"] = self.optimizer.state["gradient_norm"]
+                            dict["c"] = self.optimizer.state["c"]
+                            dict["average c"] = self.optimizer.state["average c"]
+                        else:
+                            for a,step_size in enumerate( self.optimizer.state['step_sizes']):
+                                dict["step_size"+str(a)] = step_size
+                            #   dict["avg_grad_norm"+str(a)] = self.optimizer.state["grad_norm_avg"][a]
+                            #   dict["loss_decrease"+str(a)] = self.optimizer.state["loss_dec_avg"][a]
+                                dict["loss_decrease"] = self.optimizer.state["loss_decrease"]
+                        #      dict["gradient_norm"] = self.optimizer.state["gradient_norm"][a]
                     else:
                         dict["step_size"+str(0)] = self.scheduler.get_last_lr()[0]
                         #      print(dict["step_size"+str(a)])
