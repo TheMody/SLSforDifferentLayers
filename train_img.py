@@ -33,6 +33,12 @@ def train_img(args,config):
     valds_name = "test"
     dataset_name = dataset
     resize = True
+    if dataset == "imagenet":
+      dataset_name = "imagenet-1k"
+      num_classes = 1000
+      labelname = "label"
+      dataname = "image"
+      input_dim = 224*224*3
     if dataset == "tiny-imagenet":
       dataset_name = "Maysee/tiny-imagenet"
       num_classes = 200

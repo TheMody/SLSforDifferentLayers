@@ -1,7 +1,7 @@
 
 from main import main
 
-datasets = ["cifar10", "cifar100"]  # ["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall","sst2","mrpc" ,"cola", "qnli","mnli"]#[ ]#,"mnli"]
+datasets = ["cifar10"]  # ["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall","sst2","mrpc" ,"cola", "qnli","mnli"]#[ ]#,"mnli"]
 split_by = ["layer"]#"layer","qkv",
 n_opts = [1]
 models = [ "resNet34"]#, "roberta"]

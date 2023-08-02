@@ -111,6 +111,7 @@ class Image_classifier(nn.Module):
         return self.fc1(x)
 
     def fit(self,data, epochs, eval_ds = None):
+        print(eval_ds)
         wandb.init(project="SLSforDifferentLayersImage_longer"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
         "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth, entity="pkenneweg", 
         group = "testresnet"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule + str(self.args.combine)+"_c"+ str(self.args.c)+"_beta"+ str(self.args.beta) )
