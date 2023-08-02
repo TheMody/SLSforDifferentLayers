@@ -1,8 +1,8 @@
 #!/bin/bash 
 #SBATCH --gres=gpu:1
 #SBATCH --time=96:00:00
-#SBATCH --job-name=SLSNLP
-#SBATCH --output=SLSNLP.log
+#SBATCH --job-name=SLSc
+#SBATCH --output=SLSc.log
 
 
 

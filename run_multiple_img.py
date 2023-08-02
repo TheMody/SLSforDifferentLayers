@@ -1,22 +1,18 @@
 
 from main import main
 
-datasets = [  "covertype"]  # ["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall","sst2","mrpc" ,"cola", "qnli","mnli"]#[ ]#,"mnli"]
+datasets = ["tiny-imagenet"]  # ["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall","sst2","mrpc" ,"cola", "qnli","mnli"]#[ ]#,"mnli"]
 split_by = ["layer"]#"layer","qkv",
 n_opts = [1]
-models = [ "dense"]#, "roberta"]
-update_rule = ["cycle"]#"cycle",  "impact_mag"
-<<<<<<< HEAD
-optim = [ "sgd"]#["oladamsls", "adamsls","adam"]#, "sgd", "sgdsls"]"adam", 
-=======
-optim = [ "olsgdsls"]#["oladamsls", "adamsls","adam"]#, "sgd", "sgdsls"]"adam", 
->>>>>>> 6ccb9a7939a63f9376d24ee2cadf9268a7777e26
+models = [ "effNet"]#, "roberta"]
+update_rule = ["cycle"]#"cycle",  
+optim = [ "adamsls"]#["oladamsls", "adamsls","adam"]#, "sgd", "sgdsls"]"adam", 
 combine = [ 0]
 numexp = 5
 batch_size = [32]
 cs = [ 0.5]
 epochs = [20]
-clss = ["dense"]
+clss = ["cnn"]
 n_hidden =[2]
 betas = [0.99]
 

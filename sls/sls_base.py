@@ -90,7 +90,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
                 found = 0
 
                 
-                for e in range(100):
+                for e in range(200):
                     # try a prospective step
                     if self.first_step:
                         if precond:
@@ -106,6 +106,8 @@ class StochLineSearchBase(torch.optim.Optimizer):
                     # compute the loss at the next step; no need to compute gradients.
                     loss_next = closure_deterministic()
                     self.state['loss_decrease'] = loss-loss_next
+                   # print(step_size)
+                    #print(loss-loss_next)
                     decrease= (self.avg_decrease[i] * self.beta_s + (loss-loss_next) *(1-self.beta_s) )#/((1-self.beta)**((self.state['step']+1)/len(self.avg_decrease)))
 
                     self.state['n_forwards'] += 1
