@@ -4,6 +4,7 @@ import torch
 import tensorflow_datasets as tfds
 from sklearn.model_selection import train_test_split
 import numpy as np
+import matplotlib.pyplot as plt
 smallsize = 500
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 task_list = ["cola","colasmall","sst2", "sst2smallunbalanced","sst2small", "mrpcsmall", "mrpc", "qnli", "qnlismall", "mnli", "mnlismall"]#,"qnli"]
@@ -226,6 +227,9 @@ class SimpleDataset(Dataset):
         self.dataname = dataname
         self.labelname = labelname
         self.transforms = torchvision.transforms.ToTensor()
+        self.resize = torchvision.transforms.Resize((232), interpolation=torchvision.transforms.InterpolationMode.BILINEAR, antialias=True)
+        self.center_crops = torchvision.transforms.CenterCrop((224,224))
+        self.normalize = torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
 
     def __len__(self):
         return len(self.data)
@@ -237,14 +241,19 @@ class SimpleDataset(Dataset):
             if batch_x.shape[0] == 1:
                 batch_x = batch_x.squeeze()
                 batch_x = torch.stack([batch_x,batch_x,batch_x], axis = 0)
-            batch_x = torchvision.transforms.Resize((232), interpolation=torchvision.transforms.InterpolationMode.BILINEAR)(batch_x).to(device)
-            batch_x = torchvision.transforms.CenterCrop((224,224))(batch_x)
-            batch_x = batch_x/255.0
-            batch_x = torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))(batch_x)
+            if batch_x.shape[0] == 4:
+                batch_x = batch_x[:3,:,:]
+            batch_x = self.resize(batch_x.to(device))
+            batch_x = self.center_crops(batch_x)
+            if torch.max(batch_x[:,:10,:10]) > 2: #check if image is float or integer
+                batch_x = batch_x/255.0
+            batch_x = self.normalize(batch_x)
         else:
             batch_x = batch_x.float().to(device)/255.0
-           # batch_x = torchvision.transforms.Normalize((0.485), (0.225))(batch_x)
+      #  plt.imshow(batch_x.permute(1, 2, 0).cpu().numpy())
+      #  plt.show()
         batch_y = torch.LongTensor([self.data[idx][self.labelname]]).squeeze().to(device)
+      #  print(batch_y)
         return batch_x ,batch_y
 
 from datasets import load_dataset

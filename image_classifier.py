@@ -11,6 +11,7 @@ import numpy as np
 from copy import deepcopy
 from data import load_wiki
 from sls.adam_sls import AdamSLS
+from sls.Ken_sls import KenSLS
 import wandb
 from cosine_scheduler import CosineWarmupScheduler
 
@@ -39,12 +40,18 @@ class Image_classifier(nn.Module):
             configuration = ResNetConfig(layer_type = "basic", hidden_sizes=[64, 128, 256, 512], depths = [3, 4, 6, 3]) #this is resnet 34
             self.model = ResNetModel(configuration)
             out_shape = 512
+        if args.model == "resNet50":
+            configuration = ResNetConfig() #this is resnet 50
+            self.model = ResNetModel(configuration)
+            out_shape = 2048
         if args.model == "preresNet34":
             self.model =  ResNetModel.from_pretrained("microsoft/resnet-34")
             out_shape = 512
         if args.model == "preresNet50":
             self.model =  ResNetModel.from_pretrained("microsoft/resnet-50")
             out_shape = 2048
+
+        self.model = torch.compile(self.model)
       #  self.preprocess_func = self.feature_extractor.preprocess
         # for name,param in self.model.named_parameters():
         #     print(name)
@@ -93,6 +100,8 @@ class Image_classifier(nn.Module):
                 self.optimizer = optim.Adam(self.parameters(), lr=args.opts["lr"] )
             if args.opts["opt"] == "sgd":    
                 self.optimizer = optim.SGD(self.parameters(), lr=args.opts["lr"] )
+            if args.opts["opt"] == "kensls":    
+                self.optimizer = KenSLS( [param for name,param in self.named_parameters() if not "pooler" in name] ,beta_s = self.args.beta, c = self.args.c)
             if args.opts["opt"] == "oladamsls":    
                 self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] , c = 0.1, smooth = False )
             if args.opts["opt"] == "olsgdsls":    
@@ -111,10 +120,10 @@ class Image_classifier(nn.Module):
         return self.fc1(x)
 
     def fit(self,data, epochs, eval_ds = None):
-        print(eval_ds)
+
         wandb.init(project="SLSforDifferentLayersImage_longer"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
         "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth, entity="pkenneweg", 
-        group = "testresnet"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule + str(self.args.combine)+"_c"+ str(self.args.c)+"_beta"+ str(self.args.beta) )
+        group = "testresnet"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule + str(self.args.combine)+"_c"+ str(self.args.c)+"_beta"+ str(self.args.beta) + "bs" + str(self.args.batch_size) )
         
         self.mode = "cls"
         if not "sls" in self.args.opts["opt"]:
@@ -128,6 +137,7 @@ class Image_classifier(nn.Module):
         accsteps = 0
         accloss = 0
         for e in range(epochs):
+           # if False:
             for index in range(len(data)):
                 startsteptime = time.time()
                 batch_x, batch_y = next(iter(data))
@@ -147,10 +157,17 @@ class Image_classifier(nn.Module):
                # print(self.args.opts["opt"])
                 dict = {"loss": loss.item() , "time_per_step":time.time()-startsteptime}    
                 if "sls" in  self.args.opts["opt"]:
-                    for a,step_size in enumerate( self.optimizer.state['step_sizes']):
-                        dict["step_size"+str(a)] = step_size
-                        dict["avg_grad_norm"+str(a)] = self.optimizer.state["grad_norm_avg"][a]
-                        dict["loss_decrease"+str(a)] = self.optimizer.state["loss_dec_avg"][a]
+                    if "kensls" in self.args.opts["opt"]:
+                        dict["step_size0"] = self.optimizer.state["step_size"]
+                        dict["loss_decrease"] = self.optimizer.state["loss_decrease"]
+                        dict["gradient_norm"] = self.optimizer.state["gradient_norm"]
+                        dict["c"] = self.optimizer.state["c"]
+                        dict["average c"] = self.optimizer.state["average c"]
+                    else:
+                        for a,step_size in enumerate( self.optimizer.state['step_sizes']):
+                            dict["step_size"+str(a)] = step_size
+                            dict["avg_grad_norm"+str(a)] = self.optimizer.state["grad_norm_avg"][a]
+                            dict["loss_decrease"+str(a)] = self.optimizer.state["loss_dec_avg"][a]
                 else:
                     dict["step_size"+str(0)] = self.scheduler.get_last_lr()[0]
                 wandb.log(dict)

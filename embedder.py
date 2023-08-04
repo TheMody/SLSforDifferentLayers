@@ -167,6 +167,7 @@ class NLP_embedder(nn.Module):
         for e in range(epochs):
             start = time.time()
             for i in range(math.ceil(len(x) / self.batch_size)):
+            
                 startsteptime = time.time()
                 ul = min((i+1) * self.batch_size, len(x))
                 batch_x = x[i*self.batch_size: ul]

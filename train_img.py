@@ -39,6 +39,7 @@ def train_img(args,config):
       labelname = "label"
       dataname = "image"
       input_dim = 224*224*3
+      valds_name = "validation"
     if dataset == "tiny-imagenet":
       dataset_name = "Maysee/tiny-imagenet"
       num_classes = 200
@@ -93,7 +94,7 @@ def train_img(args,config):
       img_cls = Image_classifier(num_classes,batch_size,args).to(device)
     
     if train_data == None:
-      dataset = load_dataset(dataset_name)
+      dataset = load_dataset(dataset_name, cache_dir="/media/philipkenneweg/Data/datasets")
       from data import SimpleDataset
       train_data = SimpleDataset(dataset["train"],dataname,labelname, resize = resize )
       val_data = SimpleDataset(dataset[valds_name],dataname,labelname , resize = resize)

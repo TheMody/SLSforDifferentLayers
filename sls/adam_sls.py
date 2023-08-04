@@ -209,10 +209,6 @@ class AdamSLS(StochLineSearchBase):
                     self.try_sgd_precond_update(i,self.params[i], step_size, params_current[i], grad_current[i], self.momentum)
                     step_sizes[i] = step_size
                 else:
-                    # if self.bs_scale:
-                    #     step_size_s = step_size * torch.sqrt(self.batch_size/32.0)
-                    # else: 
-                    #     step_size_s = step_size
                     self.try_sgd_precond_update(i,self.params[i], step_size, params_current[i], grad_current[i], self.momentum)
             self.nextcycle += 1
             if self.nextcycle >= len(self.params):
