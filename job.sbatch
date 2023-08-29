@@ -1,9 +1,9 @@
 #!/bin/bash 
 #SBATCH --gres=gpu:1
-#SBATCH --time=96:00:00
-#SBATCH --job-name=SLSlong
-#SBATCH --output=SLSlong.log
-
+#SBATCH --time=120:00:00
+#SBATCH --job-name=SLSiamgenetadam
+#SBATCH --output=SLSimagenetadam.log
+#SBATCH --mail-user=pkenneweg@techfak.de
 
 
 eval "$(conda shell.bash hook)"
