@@ -1,6 +1,6 @@
 
 from datasets import load_dataset
-from image_classifier import Image_classifier
+from image_classifier import Image_trainer
 from dense_classifier import Dense_classifier
 import torch
 from torch.utils.data import DataLoader
@@ -91,14 +91,28 @@ def train_img(args,config):
     if cls == "dense":
       img_cls = Dense_classifier(input_dim,256,num_classes,batch_size,args).to(device)
     else:
-      img_cls = Image_classifier(num_classes,batch_size,args).to(device)
+      img_cls = Image_trainer(num_classes,batch_size,args)
     
-    if train_data == None:
-      dataset = load_dataset(dataset_name, cache_dir="/media/philipkenneweg/Data/datasets")
-      from data import SimpleDataset
-      train_data = SimpleDataset(dataset["train"],dataname,labelname, resize = resize )
-      val_data = SimpleDataset(dataset[valds_name],dataname,labelname , resize = resize)
+    
 
-    train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
-    val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=True)
+    if dataset == "cifar10":
+      from data import getCifar10
+      train_dataloader,val_dataloader = getCifar10(batch_size)
+    elif dataset == "cifar100":
+      from data import getCifar100
+      train_dataloader,val_dataloader = getCifar100(batch_size)
+    elif dataset == "imagenet":
+      from data import getImageNet
+      train_dataloader,val_dataloader = getImageNet(batch_size)
+    else:
+   #   print("hallo")
+      if train_data == None:
+        dataset = load_dataset(dataset_name, cache_dir="/media/philipkenneweg/Data/datasets")
+        from data import SimpleDataset
+        train_data = SimpleDataset(dataset["train"],dataname,labelname, resize = resize )
+        val_data = SimpleDataset(dataset[valds_name],dataname,labelname , resize = resize)
+      train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+      val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=True)
+
+
     img_cls.fit(train_dataloader,max_epochs,val_dataloader)

@@ -4,14 +4,14 @@ from main import main
 datasets = ["imagenet"]#,"cifar10", "cifar100"]  # ["rte", "cola", "qqp"]#["sst2small", "mrpcsmall", "mnlismall", "qnlismall","sst2","mrpc" ,"cola", "qnli","mnli"]#[ ]#,"mnli"]
 split_by = ["layer"]#"layer","qkv",
 n_opts = [1]
-models = [ "resNet50"]#, "roberta"]
+models = [ "resNet34"]#, "roberta"]
 update_rule = ["cycle"]#"cycle",  "impact_mag"
-optim = [ "kensls","adamsls", "adam", "sgdsls", "sgd", "oladamsls", "olsdgsls"]#["oladamsls", "adamsls","adam"]#, "sgd", "sgdsls"]"adam", 
+optim = [ "sgd"]#["oladamsls", "adamsls","adam"]#, "sgd", "sgdsls"]"adam",  "kensls","adamsls", "adam", "sgdsls", "sgd",, "olsdgsls"
 combine = [ 0]
 numexp = 1
 batch_size = [128]
 cs = [ 0.5]
-epochs = [5]
+epochs = [100]
 clss = ["cnn"]
 n_hidden =[2]
 betas = [0.99]
