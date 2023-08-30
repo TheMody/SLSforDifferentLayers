@@ -237,12 +237,12 @@ def getCifar10(batch_size):
     trainset = torchvision.datasets.CIFAR10(
         root=rootdir, train=True, download=True, transform=transform_train)
     trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=batch_size, shuffle=True, num_workers=2)
+        trainset, batch_size=batch_size, shuffle=True)
 
     testset = torchvision.datasets.CIFAR10(
         root=rootdir, train=False, download=True, transform=transform_test)
     testloader = torch.utils.data.DataLoader(
-        testset, batch_size=batch_size, shuffle=False, num_workers=2)
+        testset, batch_size=batch_size, shuffle=False)
     return trainloader, testloader
 
 def getCifar100(batch_size):
@@ -261,12 +261,12 @@ def getCifar100(batch_size):
     trainset = torchvision.datasets.CIFAR100(
         root=rootdir, train=True, download=True, transform=transform_train)
     trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=batch_size, shuffle=True, num_workers=2)
+        trainset, batch_size=batch_size, shuffle=True)
 
     testset = torchvision.datasets.CIFAR100(
         root=rootdir, train=False, download=True, transform=transform_test)
     testloader = torch.utils.data.DataLoader(
-        testset, batch_size=batch_size, shuffle=False, num_workers=2)
+        testset, batch_size=batch_size, shuffle=False)
     return trainloader, testloader
 
 def getImageNet(batch_size):
@@ -286,14 +286,14 @@ def getImageNet(batch_size):
     ])
 
     trainset = torchvision.datasets.ImageNet(
-        root=rootdir, train=True, download=True, transform=transform_train)
+        root=rootdir, split = "train", transform=transform_train)
     trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=batch_size, shuffle=True, num_workers=2)
+        trainset, batch_size=batch_size, shuffle=True)
 
     testset = torchvision.datasets.ImageNet(
-        root=rootdir, train=False, download=True, transform=transform_test)
+        root=rootdir, split= "train", transform=transform_test)
     testloader = torch.utils.data.DataLoader(
-        testset, batch_size=batch_size, shuffle=False, num_workers=2)
+        testset, batch_size=batch_size, shuffle=False)
     return trainloader, testloader
     
 class SimpleDataset(Dataset):

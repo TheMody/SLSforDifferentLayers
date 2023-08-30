@@ -95,13 +95,9 @@ class ResNet(nn.Module):
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
         out = self.layer1(out)
-     #   print(out.shape)
         out = self.layer2(out)
-      #  print(out.shape)
         out = self.layer3(out)
-      #  print(out.shape)
         x = self.layer4(out)
-      #  print(out.shape)
         mean = x.shape[2]*x.shape[3]
         x = torch.sum(x, dim = [2,3])/mean
         out = self.linear(x)

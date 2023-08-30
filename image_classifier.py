@@ -55,10 +55,10 @@ class Image_trainer():
             self.model = EfficientNetModel(configuration)
             out_shape = 2560
         
-        # if args.model == "resNet50":
-        #     configuration = ResNetConfig() #this is resnet 50
-        #     self.model = ResNetModel(configuration)
-        #     out_shape = 2048
+        if args.model == "resNet50":
+            configuration = ResNetConfig() #this is resnet 50
+            self.model = ResNetModel(configuration)
+            out_shape = 2048
         if args.model == "preresNet34":
             self.model =  ResNetModel.from_pretrained("microsoft/resnet-34")
             out_shape = 512
@@ -71,12 +71,12 @@ class Image_trainer():
             # self.model = ResNetModel(configuration)
             self.model = ResNet34(num_classes).to(device)
             #out_shape = 512
-        elif args.model == "resNet50":
-            self.model = ResNet50(num_classes).to(device)
-            #out_shape = 512
+        # elif args.model == "resNet50":
+        #     self.model = ResNet50(num_classes).to(device)
+        #     #out_shape = 512
         else:
-            self.model = Image_model(self.model, out_shape, num_classes)
-            self.model = torch.compile(self.model.to(device))
+            self.model = Image_model(self.model, out_shape, num_classes).to(device)
+        self.model = torch.compile(self.model)
 
       #  self.preprocess_func = self.feature_extractor.preprocess
         # for name,param in self.model.named_parameters():
