@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import matplotlib.pyplot as plt
 smallsize = 500
+rootdir = "/vol/imagenet"
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 task_list = ["cola","colasmall","sst2", "sst2smallunbalanced","sst2small", "mrpcsmall", "mrpc", "qnli", "qnlismall", "mnli", "mnlismall"]#,"qnli"]
 def load_data(name="sst2"):
@@ -220,6 +221,81 @@ def load_wikiandbook(batch_size):
 from torch.utils.data import Dataset
 import torchvision
 
+def getCifar10(batch_size):
+    transform_train = torchvision.transforms.Compose([
+        torchvision.transforms.RandomCrop(32, padding=4),
+        torchvision.transforms.RandomHorizontalFlip(),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
+
+    transform_test = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+
+    trainset = torchvision.datasets.CIFAR10(
+        root=rootdir, train=True, download=True, transform=transform_train)
+    trainloader = torch.utils.data.DataLoader(
+        trainset, batch_size=batch_size, shuffle=True)
+
+    testset = torchvision.datasets.CIFAR10(
+        root=rootdir, train=False, download=True, transform=transform_test)
+    testloader = torch.utils.data.DataLoader(
+        testset, batch_size=batch_size, shuffle=False)
+    return trainloader, testloader
+
+def getCifar100(batch_size):
+    transform_train = torchvision.transforms.Compose([
+        torchvision.transforms.RandomCrop(32, padding=4),
+        torchvision.transforms.RandomHorizontalFlip(),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
+
+    transform_test = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+
+    trainset = torchvision.datasets.CIFAR100(
+        root=rootdir, train=True, download=True, transform=transform_train)
+    trainloader = torch.utils.data.DataLoader(
+        trainset, batch_size=batch_size, shuffle=True)
+
+    testset = torchvision.datasets.CIFAR100(
+        root=rootdir, train=False, download=True, transform=transform_test)
+    testloader = torch.utils.data.DataLoader(
+        testset, batch_size=batch_size, shuffle=False)
+    return trainloader, testloader
+
+def getImageNet(batch_size):
+    transform_train = torchvision.transforms.Compose([
+        torchvision.transforms.Resize((256), interpolation=torchvision.transforms.InterpolationMode.BILINEAR, antialias=True),
+        torchvision.transforms.RandomCrop((224)),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.RandomHorizontalFlip(),
+        torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        ])
+
+    transform_test = torchvision.transforms.Compose([
+        torchvision.transforms.Resize((256), interpolation=torchvision.transforms.InterpolationMode.BILINEAR, antialias=True),
+        torchvision.transforms.CenterCrop((224)),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+    ])
+
+    trainset = torchvision.datasets.ImageNet(
+        root=rootdir, train=True, download=True, transform=transform_train)
+    trainloader = torch.utils.data.DataLoader(
+        trainset, batch_size=batch_size, shuffle=True, num_workers=2)
+
+    testset = torchvision.datasets.ImageNet(
+        root=rootdir, train=False, download=True, transform=transform_test)
+    testloader = torch.utils.data.DataLoader(
+        testset, batch_size=batch_size, shuffle=False, num_workers=2)
+    return trainloader, testloader
+    
 class SimpleDataset(Dataset):
     def __init__(self, data, dataname, labelname, resize = True):
         self.resize = resize
