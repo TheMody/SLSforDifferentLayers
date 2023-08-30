@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import matplotlib.pyplot as plt
 smallsize = 500
-rootdir = "/vol/imagenet"
+rootdir = "/media/philipkenneweg/Data/datasets"#"/vol/imagenet"
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 task_list = ["cola","colasmall","sst2", "sst2smallunbalanced","sst2small", "mrpcsmall", "mrpc", "qnli", "qnlismall", "mnli", "mnlismall"]#,"qnli"]
 def load_data(name="sst2"):
@@ -16,9 +16,7 @@ def load_data(name="sst2"):
         split = split + "[:" + str(smallsize) +"]"
 #         X = X[:smallsize]
 #         y = y[:smallsize]
-#     if "mnli" in name:
-#         split = "train[:10000]"
-    
+
 #     if name not in task_list:
 #         print("dataset not suported")
    
