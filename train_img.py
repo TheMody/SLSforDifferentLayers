@@ -93,7 +93,6 @@ def train_img(args,config):
     else:
       img_cls = Image_trainer(num_classes,batch_size,args)
     
-    
 
     if dataset == "cifar10":
       from data import getCifar10
