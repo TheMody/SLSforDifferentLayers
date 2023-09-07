@@ -142,13 +142,13 @@ class Image_trainer():
         
         wandb.init(project="SLSforDifferentLayersImage_longer"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
         "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth, entity="pkenneweg", 
-        group = "testresnet"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule + str(self.args.combine)+"_c"+ str(self.args.c)+"_beta"+ str(self.args.beta) + "bs" + str(self.batch_size) )
+        group = "flatlr"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule + str(self.args.combine)+"_c"+ str(self.args.c)+"_beta"+ str(self.args.beta) + "bs" + str(self.batch_size) )
         
         self.mode = "cls"
-        if not "sls" in self.args.opts["opt"]:
-            self.scheduler = CosineWarmupScheduler(optimizer= self.optimizer, 
-                                                warmup = math.ceil(len(data)*epochs *0.1 ) ,
-                                                    max_iters = math.ceil(len(data)*epochs  ))
+        # if not "sls" in self.args.opts["opt"]:
+        #     self.scheduler = CosineWarmupScheduler(optimizer= self.optimizer, 
+        #                                         warmup = math.ceil(len(data)*epochs *0.1 ) ,
+        #                                             max_iters = math.ceil(len(data)*epochs  ))
 
 
 
@@ -175,7 +175,7 @@ class Image_trainer():
                     loss = self.criterion(y_pred, batch_y)    
                     loss.backward()
                     self.optimizer.step()
-                    self.scheduler.step()      
+                  #  self.scheduler.step()      
                # print(self.args.opts["opt"])
                 if index % log_step == 0:
                     dict = {"loss": loss.item() , "time_per_step":time.time()-startsteptime}    
