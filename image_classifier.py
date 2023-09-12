@@ -138,9 +138,9 @@ class Image_trainer():
                 self.optimizer = AdamSLS( [[param for name,param in self.model.named_parameters() if not "pooler" in name]],strategy = args.update_rule, combine_threshold = args.combine, base_opt = "scalar",gv_option = "scalar", c = self.args.c , beta_s = args.beta )
 
 
-    def fit(self,data, epochs, eval_ds = None, log_step =10):
+    def fit(self,data, epochs, eval_ds = None, log_step =1):
         
-        wandb.init(project="SLSforDifferentLayersImage_longer"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
+        wandb.init(project="SLSforDifferentLayersImage_longer_new"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
         "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth, entity="pkenneweg", 
         group = "flatlr"+self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule + str(self.args.combine)+"_c"+ str(self.args.c)+"_beta"+ str(self.args.beta) + "bs" + str(self.batch_size) )
         
@@ -158,6 +158,7 @@ class Image_trainer():
         for e in range(epochs):
            # if False:
           #  print(len(data))
+            self.model.train()
             for index in range(len(data)):
                 startsteptime = time.time()
                 batch_x, batch_y = next(iter(data))
@@ -196,30 +197,37 @@ class Image_trainer():
                     wandb.log(dict)
                 accloss = accloss + loss.item()
                 accsteps += 1
-                if index % np.max((1,int((len(data))*0.1))) == 0:
-                    print(index*self.batch_size, accloss/ accsteps)
-                    accsteps = 0
-                    accloss = 0
+               # if index % np.max((1,int((len(data))*0.1))) == 0:
+                print(index*self.batch_size, accloss/ accsteps)
+                accsteps = 0
+                accloss = 0
             if not eval_ds == None:
-                accuracy = self.evaluate(eval_ds)
+                accuracy, test_loss = self.evaluate(eval_ds)
                 print("accuracy at epoch", e, accuracy)
+                print("test loss at epoch", e, test_loss)
                 wandb.log({"accuracy": accuracy})
+                wandb.log({"test loss": test_loss})
         wandb.finish()
         return accuracy
 
     @torch.no_grad()
     def evaluate(self, data):
-        acc = 0
-        for _ in range(len(data)):
+        acc = 0.0
+        loss = 0.0
+        self.model.eval()
+        ds_len = len(data)
+        for _ in range(ds_len):#len(data)):
             batch_x, batch_y = next(iter(data))
             batch_x = batch_x.to(device)
             batch_y = batch_y.to(device)
-            batch_x = self.model(batch_x)
-            y_pred = torch.argmax(batch_x, dim = 1)
-            accuracy = torch.sum(batch_y == y_pred)
+            y_pred = self.model(batch_x)
+            loss += self.criterion(y_pred, batch_y)  
+            y_pred = torch.argmax(y_pred, dim = 1)
+            accuracy = torch.sum(batch_y == y_pred)/self.batch_size
             acc += accuracy
         
-        acc = acc.item()/(len(data)*self.batch_size)
-        return acc
+        acc = acc.item()/ds_len
+        loss = loss.item()/ds_len
+        return acc, loss 
 
 

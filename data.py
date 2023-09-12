@@ -289,9 +289,9 @@ def getImageNet(batch_size):
         trainset, batch_size=batch_size, shuffle=True)
 
     testset = torchvision.datasets.ImageNet(
-        root=rootdir, split= "train", transform=transform_test)
+        root=rootdir, split= "val", transform=transform_test)
     testloader = torch.utils.data.DataLoader(
-        testset, batch_size=batch_size, shuffle=False)
+        testset, batch_size=batch_size, shuffle=True)
     return trainloader, testloader
     
 class SimpleDataset(Dataset):

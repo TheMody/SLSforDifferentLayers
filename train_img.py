@@ -4,6 +4,7 @@ from image_classifier import Image_trainer
 from dense_classifier import Dense_classifier
 import torch
 from torch.utils.data import DataLoader
+from utils import *
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def train_img(args,config):
@@ -103,6 +104,11 @@ def train_img(args,config):
     elif dataset == "imagenet":
       from data import getImageNet
       train_dataloader,val_dataloader = getImageNet(batch_size)
+
+      # print("train images")
+      # show_img(train_dataloader)
+      # print("val images")
+      # show_img(val_dataloader)
     else:
    #   print("hallo")
       if train_data == None:
