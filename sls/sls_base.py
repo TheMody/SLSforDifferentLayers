@@ -199,7 +199,9 @@ class StochLineSearchBase(torch.optim.Optimizer):
         self.state['step'] += 1
         self.state['all_step_size'].append(step_sizes)
         self.state['all_losses'].append(loss.item())
-        self.state['all_new_losses'].append(loss_next.item())
+        if isinstance(loss_next, torch.Tensor):
+            loss_next = loss_next.item()
+        self.state['all_new_losses'].append(loss_next)
         self.state['grad_norm_avg']  = [a.item() for a in self.avg_gradient_norm]
         self.state['loss_dec_avg'] = [a.item()  if isinstance(a, torch.Tensor) else a for a in self.avg_decrease]
         self.state['n_batches'] += 1

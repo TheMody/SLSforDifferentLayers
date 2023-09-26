@@ -102,7 +102,7 @@ class NLP_embedder(nn.Module):
                     self.optimizer = optim.SGD(self.parameters(), lr=args.opts["lr"] )
                # if args.opts["opt"] == "lion":
                 if args.opts["opt"] == "adamsls":    
-                    self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] , c = self.args.c, beta_s = self.args.beta)
+                    self.optimizer = AdamSLS( [[param for name,param in self.named_parameters() if not "pooler" in name]] , c = self.args.c, beta_s = self.args.beta, speed_up=self.args.speed_up)
                 if args.opts["opt"] == "kensls":    
                     self.optimizer = KenSLS( [param for name,param in self.named_parameters() if not "pooler" in name] ,beta_s = self.args.beta, c = self.args.c)
                 if args.opts["opt"] == "lionsls":    
@@ -149,7 +149,7 @@ class NLP_embedder(nn.Module):
     def fit(self, x, y, epochs=1, X_val= None,Y_val= None):
         wandb.init(project="SLSforDifferentLayers"+self.args.ds, name = self.args.split_by + "_" + self.args.opts["opt"] + "_" + self.args.model +
             "_" + str(self.args.number_of_diff_lrs) +"_"+ self.args.savepth, entity="pkenneweg", 
-            group = "kensls_"+ self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule 
+            group = "speedtest"+str(self.args.speed_up)+ self.args.opts["opt"] + "_" + self.args.model +"_" + str(self.args.number_of_diff_lrs) + self.args.update_rule 
             + str(self.args.combine)+"bs"+ str(self.batch_size) +"c"+ str(self.args.c)+"beta"+ str(self.args.beta))
         #wandb.watch(self)
         
@@ -200,6 +200,7 @@ class NLP_embedder(nn.Module):
                             dict["c"] = self.optimizer.state["c"]
                             dict["average c"] = self.optimizer.state["average c"]
                         else:
+                            dict["ls_freq"] = self.optimizer.state["LS_freq"]
                             for a,step_size in enumerate( self.optimizer.state['step_sizes']):
                                 dict["step_size"+str(a)] = step_size
                             #   dict["avg_grad_norm"+str(a)] = self.optimizer.state["grad_norm_avg"][a]
