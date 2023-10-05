@@ -3,7 +3,8 @@
 #SBATCH --time=120:00:00
 #SBATCH --job-name=SLScifar10
 #SBATCH --output=SLScifar10.log
-#SBATCH --mail-user=pkenneweg@techfak.de
+#SBATCH --mail-user=pkenneweg@techfak.uni-bielefeld.de
+#SBATCH --mail-type=END
 
 
 eval "$(conda shell.bash hook)"
