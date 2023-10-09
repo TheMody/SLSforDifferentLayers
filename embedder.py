@@ -197,8 +197,11 @@ class NLP_embedder(nn.Module):
                             dict["step_size0"] = self.optimizer.state["step_size"]
                             dict["loss_decrease"] = self.optimizer.state["loss_decrease"]
                             dict["gradient_norm"] = self.optimizer.state["gradient_norm"]
+                            dict["gradient_norm_momentum"] = self.optimizer.state["g_norm_momentum"]
+                            dict["loss_dec_momentum"] = self.optimizer.state["l_dec_momentum"]
                             dict["c"] = self.optimizer.state["c"]
                             dict["average c"] = self.optimizer.state["average c"]
+                            dict["forward_passes"] = self.optimizer.state["forward_passes"]
                         else:
                             dict["ls_freq"] = self.optimizer.state["LS_freq"]
                             for a,step_size in enumerate( self.optimizer.state['step_sizes']):

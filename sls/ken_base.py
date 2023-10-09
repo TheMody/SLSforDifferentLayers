@@ -83,6 +83,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
             self.try_sgd_precond_update(self.params, step_size, params_current, grad_current, momentum=self.momentum)
         else:
             try_sgd_update(self.params, step_size, params_current, grad_current)
+        self.state["forward_passes"] += 1
 
     def basic_line_search(self,step_size,   params_current, grad_current, closure_deterministic, precond=False ):
         with torch.no_grad():
@@ -100,13 +101,14 @@ class StochLineSearchBase(torch.optim.Optimizer):
         return losses, step_sizes
 
     def line_search(self, step_size, params_current, grad_current,g_norm, loss, closure_deterministic, precond=False):
-         with torch.no_grad():
+        self.state["forward_passes"] = 0
+        with torch.no_grad():
          #   beta_large = 0.5
             beta_small = 0.999
             beta_momentum = 0.99
          #   armijo = True
             small_step_size = 5e-8
-            step_size = step_size * (1.0/beta_small)
+            step_size = step_size /beta_small
 
             #estimate g_norm for optimizers with momentum
             self.update_step( small_step_size, params_current, grad_current, precond=precond)
@@ -123,16 +125,13 @@ class StochLineSearchBase(torch.optim.Optimizer):
                 loss_decrease = (loss-loss_next)
                 g_norm = loss_decrease / small_step_size
 
-            # if g_norm < 0.0:
-            #     g_norm = 0
             self.g_norm_momentum = g_norm * (1-beta_momentum) + self.g_norm_momentum * beta_momentum
-          #  print(g_norm)
 
             self.update_step( step_size, params_current, grad_current, precond=precond)
             loss_next = closure_deterministic()
             loss_decrease = (loss-loss_next)
             self.loss_decrease_momentum_temp = loss_decrease * (1-beta_momentum) + self.loss_decrease_momentum * beta_momentum
-            c = self.c if g_norm > 0.0 else 1.0/self.c
+            c = self.c if self.g_norm_momentum > 0.0 else 1.0/self.c
             for e in range(100):#
              #   print(step_size)
                 if step_size < small_step_size:
@@ -155,6 +154,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
             self.state['loss_decrease'] = loss -loss_next
             self.state['gradient_norm'] = g_norm
             self.state['c'] = loss_decrease/(g_norm*step_size)
+            self.state["l_dec_momentum"] = self.loss_decrease_momentum
             self.state['average c'] = self.loss_decrease_momentum/(self.g_norm_momentum*step_size)
             self.state['loss_decrease_momentum'] = self.loss_decrease_momentum
             self.state['g_norm_momentum'] = self.g_norm_momentum

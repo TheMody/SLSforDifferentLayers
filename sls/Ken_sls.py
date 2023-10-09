@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import wandb
 from .ken_base import StochLineSearchBase, get_grad_list, compute_grad_norm, random_seed_torch, try_sgd_update
 from PIL import Image
+from utils_plot import *
 
 #gets a nested list of parameters as input
 class KenSLS(StochLineSearchBase):
@@ -178,7 +179,6 @@ class KenSLS(StochLineSearchBase):
         #   print(explore_step_size)
         step_size , loss_next = self.line_search(step_size, params_current, grad_current,g_norm, loss, closure_deterministic, precond=True)
 
-
         
         if self.state['step'] % 20 == 0 or (loss- loss_next).item() < 0:
             with torch.no_grad():
@@ -187,28 +187,67 @@ class KenSLS(StochLineSearchBase):
                 
                 lossesdec = [(loss - l).cpu().numpy() for l in losses]
                 losses = [ l.cpu().numpy() for l in losses]
-          #  ax = plt.axes()
-           # self.axlist.append(ax)
-            # if len(self.axlist) > 10:
-            #    axc= self.axlist.pop(0)
-            #    axc.clf()
-            plt.plot(step_sizes, lossesdec)#,'-gD', markevery = [next_pos])
-            plt.plot(step_sizes, [self.c*self.state['gradient_norm'].item() * s for s in step_sizes], c = "k")
+            
+            dict = {"step_sizes": step_sizes, "lossesdec": lossesdec, 
+                "armijo": [self.c*self.state['gradient_norm'].item() * s for s in step_sizes], 
+                "current_step": (step_size, (loss-loss_next).item()), 
+                "optimum_step": (step_sizes[np.argmax(lossesdec)], lossesdec[np.argmax(lossesdec)]) }
+            self.axlist.append(dict)
+            if len(self.axlist) > 100:
+                self.axlist.pop(0)
+            loss_surface = np.asarray([self.axlist[i]["lossesdec"] for i in range(len(self.axlist))])
 
-            plt.scatter(step_size, (loss-loss_next).item(), c = 'r')
-            plt.scatter(step_sizes[np.argmax(lossesdec)], lossesdec[np.argmax(lossesdec)], c = 'g')
+            #normal plot of current loss landscape
+            plt.plot(step_sizes, lossesdec)#,'-gD', markevery = [next_pos])
+            plt.plot(step_sizes, dict["armijo"], c = "k")
+            plt.scatter(dict["current_step"][0], dict["current_step"][1], c = 'r')
+            plt.scatter(dict["optimum_step"][0], dict["optimum_step"][1], c = 'g')
             plt.xscale('log')
             plt.ylim((-lossesdec[np.argmax(lossesdec)]*1.1,lossesdec[np.argmax(lossesdec)]*1.1))
-    #     plt.show()
             plt.savefig("plots/losslandscape"+ str(self.state['step']) +".png")
-          #  plt.title("step " + str(self.state['step'])+ " loss_change: " + str((loss-loss_next).item()))
-            img = Image.open("plots/losslandscape"+ str(self.state['step']) +".png")
-            img = wandb.Image(img, caption="step " + str(self.state['step'])+ " loss_change: " + str((loss-loss_next).item()))
-            wandb.log({"loss landscape": img})
             plt.clf()
 
-            self.step_size = step_size
-            self.try_sgd_precond_update(self.params,self.step_size, params_current, grad_current, self.momentum)
+            #plot of current loss landscape and fading past ones
+            for i,d in enumerate(self.axlist[-10:]):
+                plt.plot(d["step_sizes"], d["lossesdec"], color = (0,0,1,(i+1)/len(self.axlist)))#,'-gD', markevery = [next_pos])
+                plt.plot(d["step_sizes"], d["armijo"], color = (0,0,0,(i+1)/len(self.axlist)))
+                plt.scatter(d["current_step"][0], d["current_step"][1], color = (1,0,0,(i+1)/len(self.axlist)))
+                plt.scatter(d["optimum_step"][0], d["optimum_step"][1], color = (0,1,0,(i+1)/len(self.axlist)))
+            plt.xscale('log')
+            plt.ylim((-np.max(loss_surface)*1.1,np.max(loss_surface)*1.1))
+            plt.savefig("plots/losslandscapeoverlapped"+ str(self.state['step']) +".png")
+            plt.clf()
+
+            #3d plot of current loss landscape and past ones
+            ax = plt.axes(projection='3d')
+            ax.set_zlim(-np.max(loss_surface)*1.1,np.max(loss_surface)*1.1)
+            x,y = np.meshgrid(np.log(step_sizes), np.arange(len(self.axlist)))
+            ax.plot_surface(x,y, loss_surface)
+            plt.savefig("plots/losslandscape3d"+ str(self.state['step']) +".png")
+
+            #img plot of current loss landscape and past ones
+            plt.clf()
+            loss_surface_rgb = loss_to_rgb(loss_surface,limit = np.max(loss_surface)*1.1)
+         #   loss_surface_rgb = np.flip(loss_surface_rgb, axis=0)
+            plt.imshow(loss_surface_rgb)
+            plt.scatter([np.argmin(np.abs(np.asarray(step_sizes)-a["current_step"][0])) for a in self.axlist], np.arange(len(self.axlist)), c = 'b')
+            plt.savefig("plots/losslandscapeimg"+ str(self.state['step']) +".png")
+
+
+            imgimg = Image.open("plots/losslandscapeimg"+ str(self.state['step']) +".png")
+            imgimg = wandb.Image(imgimg, caption="losslandscapeimg " + str(self.state['step']))
+            imglapped = Image.open("plots/losslandscapeoverlapped"+ str(self.state['step']) +".png")
+            imglapped = wandb.Image(imglapped, caption="losslandscapeoverlapped " + str(self.state['step']))
+            img = Image.open("plots/losslandscape"+ str(self.state['step']) +".png")
+            img = wandb.Image(img, caption="step " + str(self.state['step'])+ " loss_change: " + str((loss-loss_next).item()))
+            img3d = Image.open("plots/losslandscape3d"+ str(self.state['step']) +".png")
+            img3d = wandb.Image(img3d, caption="losslandscape " + str(self.state['step']))
+            wandb.log({"loss landscape": img, "3dlosslandscape": img3d, "loss landscape img": imgimg, "loss landscape overlapped": imglapped})
+
+            plt.clf()
+
+        self.step_size = step_size
+        self.try_sgd_precond_update(self.params,self.step_size, params_current, grad_current, self.momentum)
 
         
         self.save_state(self.step_size, loss, loss_next)
