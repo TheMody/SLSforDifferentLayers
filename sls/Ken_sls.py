@@ -208,29 +208,34 @@ class KenSLS(StochLineSearchBase):
             plt.clf()
 
             #plot of current loss landscape and fading past ones
-            for i,d in enumerate(self.axlist[-10:]):
-                plt.plot(d["step_sizes"], d["lossesdec"], color = (0,0,1,(i+1)/len(self.axlist)))#,'-gD', markevery = [next_pos])
-                plt.plot(d["step_sizes"], d["armijo"], color = (0,0,0,(i+1)/len(self.axlist)))
-                plt.scatter(d["current_step"][0], d["current_step"][1], color = (1,0,0,(i+1)/len(self.axlist)))
-                plt.scatter(d["optimum_step"][0], d["optimum_step"][1], color = (0,1,0,(i+1)/len(self.axlist)))
+            len_fade = 10
+            for i,d in enumerate(self.axlist[-len_fade:]):
+                plt.plot(d["step_sizes"], d["lossesdec"], color = (0,0,1,(i+1)/len(self.axlist[-len_fade:])))#,'-gD', markevery = [next_pos])
+                plt.plot(d["step_sizes"], d["armijo"], color = (0,0,0,(i+1)/len(self.axlist[-len_fade:])))
+                plt.scatter(d["current_step"][0], d["current_step"][1], color = (1,0,0,(i+1)/len(self.axlist[-len_fade:])))
+                plt.scatter(d["optimum_step"][0], d["optimum_step"][1], color = (0,1,0,(i+1)/len(self.axlist[-len_fade:])))
             plt.xscale('log')
-            plt.ylim((-np.max(loss_surface)*1.1,np.max(loss_surface)*1.1))
+            plt.ylim((-np.max(loss_surface[-len_fade:])*1.1,np.max(loss_surface[-len_fade:])*1.1))
             plt.savefig("plots/losslandscapeoverlapped"+ str(self.state['step']) +".png")
             plt.clf()
 
             #3d plot of current loss landscape and past ones
-            ax = plt.axes(projection='3d')
-            ax.set_zlim(-np.max(loss_surface)*1.1,np.max(loss_surface)*1.1)
-            x,y = np.meshgrid(np.log(step_sizes), np.arange(len(self.axlist)))
-            ax.plot_surface(x,y, loss_surface)
-            plt.savefig("plots/losslandscape3d"+ str(self.state['step']) +".png")
+            # ax = plt.axes(projection='3d')
+            # ax.set_zlim(-np.max(loss_surface)*1.1,np.max(loss_surface)*1.1)
+            # x,y = np.meshgrid(np.log(step_sizes), np.arange(len(self.axlist)))
+            # ax.plot_surface(x,y, loss_surface)
+            # plt.savefig("plots/losslandscape3d"+ str(self.state['step']) +".png")
 
             #img plot of current loss landscape and past ones
-            plt.clf()
-            loss_surface_rgb = loss_to_rgb(loss_surface,limit = np.max(loss_surface)*1.1)
-         #   loss_surface_rgb = np.flip(loss_surface_rgb, axis=0)
-            plt.imshow(loss_surface_rgb)
-            plt.scatter([np.argmin(np.abs(np.asarray(step_sizes)-a["current_step"][0])) for a in self.axlist], np.arange(len(self.axlist)), c = 'b')
+            loss_surface_rgb = np.clip(loss_surface, -np.max(loss_surface), np.max(loss_surface))
+          #  loss_surface_rgb = np.flip(loss_surface_rgb, axis=1)
+          #  loss_surface_rgb = np.flip(loss_surface_rgb, axis=0)
+            im = plt.imshow(loss_surface_rgb, cmap =plt.cm.RdBu )
+            plt.colorbar(im)
+            plt.xticks([0,len(step_sizes)//4,len(step_sizes)//2,(len(step_sizes)//4)*3,len(step_sizes)-1],[5e-3,5e-4,5e-5,5e-6,5e-7])
+            plt.xlabel("step size")
+            plt.ylabel("step from 0(oldest) to youngest")
+            plt.scatter([np.argmin(np.abs(np.asarray(step_sizes)-a["current_step"][0])) for a in self.axlist], np.arange(len(self.axlist)), c = 'g')
             plt.savefig("plots/losslandscapeimg"+ str(self.state['step']) +".png")
 
 
@@ -240,9 +245,9 @@ class KenSLS(StochLineSearchBase):
             imglapped = wandb.Image(imglapped, caption="losslandscapeoverlapped " + str(self.state['step']))
             img = Image.open("plots/losslandscape"+ str(self.state['step']) +".png")
             img = wandb.Image(img, caption="step " + str(self.state['step'])+ " loss_change: " + str((loss-loss_next).item()))
-            img3d = Image.open("plots/losslandscape3d"+ str(self.state['step']) +".png")
-            img3d = wandb.Image(img3d, caption="losslandscape " + str(self.state['step']))
-            wandb.log({"loss landscape": img, "3dlosslandscape": img3d, "loss landscape img": imgimg, "loss landscape overlapped": imglapped})
+            # img3d = Image.open("plots/losslandscape3d"+ str(self.state['step']) +".png")
+            # img3d = wandb.Image(img3d, caption="losslandscape " + str(self.state['step']))
+            wandb.log({"loss landscape": img, "loss landscape img": imgimg, "loss landscape overlapped": imglapped})
 
             plt.clf()
 
