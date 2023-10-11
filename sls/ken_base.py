@@ -153,7 +153,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
             self.loss_decrease_momentum = loss_decrease * (1-beta_momentum) + self.loss_decrease_momentum * beta_momentum
 
             self.state['loss_decrease'] = loss -loss_next
-            self.state['gradient_norm'] = g_norm
+            self.state['gradient_norm'] = g_norm.item() if isinstance(g_norm, torch.Tensor) else g_norm
             self.state['c'] = loss_decrease/(g_norm*step_size)
             self.state["l_dec_momentum"] = self.loss_decrease_momentum
             self.state['average c'] = self.loss_decrease_momentum/(self.g_norm_momentum*step_size)

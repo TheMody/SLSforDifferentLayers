@@ -189,7 +189,7 @@ class KenSLS(StochLineSearchBase):
                 losses = [ l.cpu().numpy() for l in losses]
             
             dict = {"step_sizes": step_sizes, "lossesdec": lossesdec, 
-                "armijo": [self.c*self.state['gradient_norm'].item() * s for s in step_sizes], 
+                "armijo": [self.c*self.state['gradient_norm'] * s for s in step_sizes], 
                 "current_step": (step_size, (loss-loss_next).item()), 
                 "optimum_step": (step_sizes[np.argmax(lossesdec)], lossesdec[np.argmax(lossesdec)]) }
             self.axlist.append(dict)
