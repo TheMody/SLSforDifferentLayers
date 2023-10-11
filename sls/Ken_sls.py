@@ -245,9 +245,7 @@ class KenSLS(StochLineSearchBase):
             imglapped = wandb.Image(imglapped, caption="losslandscapeoverlapped " + str(self.state['step']))
             img = Image.open("plots/losslandscape"+ str(self.state['step']) +".png")
             img = wandb.Image(img, caption="step " + str(self.state['step'])+ " loss_change: " + str((loss-loss_next).item()))
-            # img3d = Image.open("plots/losslandscape3d"+ str(self.state['step']) +".png")
-            # img3d = wandb.Image(img3d, caption="losslandscape " + str(self.state['step']))
-            wandb.log({"loss landscape": img, "loss landscape img": imgimg, "loss landscape overlapped": imglapped})
+            self.state["log_dict"] = {"loss landscape": img, "loss landscape img": imgimg, "loss landscape overlapped": imglapped}
 
             plt.clf()
 

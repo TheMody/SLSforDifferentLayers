@@ -194,6 +194,9 @@ class NLP_embedder(nn.Module):
                     dict = {"loss": loss.item() , "time_per_step":time.time()-startsteptime}#, "backtracks": np.sum(self.optimizer[a].state['n_backtr'][-1] for a in range(len(self.optimizer)))}
                     if "sls" in  self.args.opts["opt"]:
                         if "kensls" in self.args.opts["opt"]:
+                            for key in self.optimizer.state["log_dict"]:
+                              #  print("key", key)
+                                dict[key] = self.optimizer.state["log_dict"][key]
                             dict["step_size0"] = self.optimizer.state["step_size"]
                             dict["loss_decrease"] = self.optimizer.state["loss_decrease"]
                             dict["gradient_norm"] = self.optimizer.state["gradient_norm"]
@@ -202,6 +205,7 @@ class NLP_embedder(nn.Module):
                             dict["c"] = self.optimizer.state["c"]
                             dict["average c"] = self.optimizer.state["average c"]
                             dict["forward_passes"] = self.optimizer.state["forward_passes"]
+                            
                         else:
                             dict["ls_freq"] = self.optimizer.state["LS_freq"]
                             for a,step_size in enumerate( self.optimizer.state['step_sizes']):
