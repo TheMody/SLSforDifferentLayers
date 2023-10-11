@@ -107,18 +107,14 @@ class KenSLS(StochLineSearchBase):
         else:
             loss = closure_deterministic()
             loss.backward()
-        # print("time for backwards:", time.time()-start)
-        # start = time.time()
+            
         if self.clip_grad:
             torch.nn.utils.clip_grad_norm_(self.params, 0.25)
         # increment # forward-backward calls
-        self.state['n_forwards'] += 1
-     #   self.state['n_backwards'] += 1        
+        self.state['n_forwards'] += 1 
         # save the current parameters:
         params_current = copy.deepcopy(self.params)
         grad_current = get_grad_list(self.params) 
-        # print("time for copies:", time.time()-start)
-        # start = time.time()
 
        # grad_norm = [compute_grad_norm(grad) for grad in grad_current]
         # print("time for grad norm:", time.time()-start)
@@ -146,12 +142,6 @@ class KenSLS(StochLineSearchBase):
 
         # compute step size and execute step
         # =================
-      #  print("at step:",self.state['step'])
-        
-
-     #   self.state['gradient_norm'] =  [a.item() for a in pp_norm]
-     #   self.pp_norm = pp_norm
-        #    self.avg_gradient_norm_scaled[i] = self.avg_gradient_norm[i]/(1-self.beta)**(self.state['step']+1)
         if self.smooth == False and not self.smooth_after == 0:
             if self.state['step'] > self.smooth_after:
                 self.smooth = True
@@ -211,7 +201,7 @@ class KenSLS(StochLineSearchBase):
             len_fade = 10
             for i,d in enumerate(self.axlist[-len_fade:]):
                 plt.plot(d["step_sizes"], d["lossesdec"], color = (0,0,1,(i+1)/len(self.axlist[-len_fade:])))#,'-gD', markevery = [next_pos])
-                plt.plot(d["step_sizes"], d["armijo"], color = (0,0,0,(i+1)/len(self.axlist[-len_fade:])))
+              #  plt.plot(d["step_sizes"], d["armijo"], color = (0,0,0,(i+1)/len(self.axlist[-len_fade:])))
                 plt.scatter(d["current_step"][0], d["current_step"][1], color = (1,0,0,(i+1)/len(self.axlist[-len_fade:])))
                 plt.scatter(d["optimum_step"][0], d["optimum_step"][1], color = (0,1,0,(i+1)/len(self.axlist[-len_fade:])))
             plt.xscale('log')
@@ -219,17 +209,9 @@ class KenSLS(StochLineSearchBase):
             plt.savefig("plots/losslandscapeoverlapped"+ str(self.state['step']) +".png")
             plt.clf()
 
-            #3d plot of current loss landscape and past ones
-            # ax = plt.axes(projection='3d')
-            # ax.set_zlim(-np.max(loss_surface)*1.1,np.max(loss_surface)*1.1)
-            # x,y = np.meshgrid(np.log(step_sizes), np.arange(len(self.axlist)))
-            # ax.plot_surface(x,y, loss_surface)
-            # plt.savefig("plots/losslandscape3d"+ str(self.state['step']) +".png")
 
             #img plot of current loss landscape and past ones
             loss_surface_rgb = np.clip(loss_surface, -np.max(loss_surface), np.max(loss_surface))
-          #  loss_surface_rgb = np.flip(loss_surface_rgb, axis=1)
-          #  loss_surface_rgb = np.flip(loss_surface_rgb, axis=0)
             im = plt.imshow(loss_surface_rgb, cmap =plt.cm.RdBu )
             plt.colorbar(im)
             plt.xticks([0,len(step_sizes)//4,len(step_sizes)//2,(len(step_sizes)//4)*3,len(step_sizes)-1],[5e-3,5e-4,5e-5,5e-6,5e-7])

@@ -124,22 +124,23 @@ class StochLineSearchBase(torch.optim.Optimizer):
                 loss_next = closure_deterministic()
                 loss_decrease = (loss-loss_next)
                 g_norm = loss_decrease / small_step_size
-            if g_norm < 0.0:
-                g_norm = 0.0
+            # if g_norm < 0.0:
+            #     g_norm = 0.0
             self.g_norm_momentum = g_norm * (1-beta_momentum) + self.g_norm_momentum * beta_momentum
 
             self.update_step( step_size, params_current, grad_current, precond=precond)
             loss_next = closure_deterministic()
             loss_decrease = (loss-loss_next)
             self.loss_decrease_momentum_temp = loss_decrease * (1-beta_momentum) + self.loss_decrease_momentum * beta_momentum
-           # c = self.c if self.g_norm_momentum > 0.0 else 1.0/self.c
+            c = self.c if self.g_norm_momentum > 0.0 else 1.0/self.c
+            #print("g_norm_momentum is smaller 0, indicates something going horribly wrong")
             for e in range(100):#
              #   print(step_size)
                 if step_size < small_step_size:
                     step_size = step_size * (1.0 /  self.beta_b)
                    # print("step size too small", step_size)
                     break
-                if self.loss_decrease_momentum_temp < self.g_norm_momentum * self.c * step_size: #armijo condition not fullfilled -> decrease step size
+                if self.loss_decrease_momentum_temp < self.g_norm_momentum * c * step_size: #armijo condition not fullfilled -> decrease step size
                     step_size = step_size * self.beta_b
                     self.update_step( step_size, params_current, grad_current, precond=precond)
                     loss_next = closure_deterministic()
