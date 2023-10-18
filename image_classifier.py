@@ -127,7 +127,7 @@ class Image_trainer():
             if args.opts["opt"] == "sgd":    
                 self.optimizer = optim.SGD(self.model.parameters(), lr=args.opts["lr"] )
             if args.opts["opt"] == "kensls":    
-                self.optimizer = KenSLS( [param for name,param in self.model.named_parameters() if not "pooler" in name] ,beta_s = self.args.beta, c = self.args.c)
+                self.optimizer = KenSLS( [param for name,param in self.named_parameters() if not "pooler" in name] ,beta_s = self.args.beta, c = self.args.c)
             if args.opts["opt"] == "oladamsls":    
                 self.optimizer = AdamSLS( [[param for name,param in self.model.named_parameters() if not "pooler" in name]] , c = 0.1, smooth = False )
             if args.opts["opt"] == "olsgdsls":    
@@ -182,11 +182,16 @@ class Image_trainer():
                     dict = {"loss": loss.item() , "time_per_step":time.time()-startsteptime}    
                     if "sls" in  self.args.opts["opt"]:
                         if "kensls" in self.args.opts["opt"]:
+                            for key in self.optimizer.state["log_dict"]:
+                                dict[key] = self.optimizer.state["log_dict"][key]
                             dict["step_size0"] = self.optimizer.state["step_size"]
                             dict["loss_decrease"] = self.optimizer.state["loss_decrease"]
                             dict["gradient_norm"] = self.optimizer.state["gradient_norm"]
+                            dict["gradient_norm_momentum"] = self.optimizer.state["g_norm_momentum"]
+                            dict["loss_dec_momentum"] = self.optimizer.state["l_dec_momentum"]
                             dict["c"] = self.optimizer.state["c"]
                             dict["average c"] = self.optimizer.state["average c"]
+                            dict["forward_passes"] = self.optimizer.state["forward_passes"]
                         else:
                             for a,step_size in enumerate( self.optimizer.state['step_sizes']):
                                 dict["step_size"+str(a)] = step_size
