@@ -29,6 +29,7 @@ def train_img(args,config):
     args.c = float(config["DEFAULT"]["c"])
     args.beta = float(config["DEFAULT"]["beta"])
     args.hidden_dims = int(config["DEFAULT"]["num_hidden_dims"])
+    args.gradient_accumulation_steps = int(config["DEFAULT"]["gradient_accumulation_steps"])
     cls = config["DEFAULT"]["cls"]
 
     valds_name = "test"
@@ -97,13 +98,13 @@ def train_img(args,config):
 
     if dataset == "cifar10":
       from data import getCifar10
-      train_dataloader,val_dataloader = getCifar10(batch_size)
+      train_dataloader,val_dataloader = getCifar10(batch_size,args.gradient_accumulation_steps)
     elif dataset == "cifar100":
       from data import getCifar100
-      train_dataloader,val_dataloader = getCifar100(batch_size)
+      train_dataloader,val_dataloader = getCifar100(batch_size,args.gradient_accumulation_steps)
     elif dataset == "imagenet":
       from data import getImageNet
-      train_dataloader,val_dataloader = getImageNet(batch_size)
+      train_dataloader,val_dataloader = getImageNet(batch_size,args.gradient_accumulation_steps)
 
       # print("train images")
       # show_img(train_dataloader)
@@ -116,7 +117,7 @@ def train_img(args,config):
         from data import SimpleDataset
         train_data = SimpleDataset(dataset["train"],dataname,labelname, resize = resize )
         val_data = SimpleDataset(dataset[valds_name],dataname,labelname , resize = resize)
-      train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+      train_dataloader = DataLoader(train_data, batch_size=batch_size*args.gradient_accumulation_steps, shuffle=True)
       val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=True)
 
 

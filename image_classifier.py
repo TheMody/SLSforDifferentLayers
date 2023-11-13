@@ -153,30 +153,43 @@ class Image_trainer():
 
         accuracy = None
         accsteps = 0
-        accloss = 0
+        accloss2 = 0
+        
         for e in range(epochs):
-           # if False:
-          #  print(len(data))
             self.model.train()
-            for index in range(len(data)):
+            dataiter = iter(data) #dataiter uses batchsize*self.args.gradient_accumulation_steps as batchisze
+            for index in range(len(data)//self.args.gradient_accumulation_steps):
                 startsteptime = time.time()
-                batch_x, batch_y = next(iter(data))
-                batch_x = batch_x.to(device)
-                batch_y = batch_y.to(device)
-              #  print(batch_x.shape)
+                self.optimizer.zero_grad()
+                batch_x, batch_y = next(dataiter)
+                def closure(backward = False):
+                    accloss = 0.0
+                    for micro_step in range(self.args.gradient_accumulation_steps):
+                        batch_x_small = batch_x[micro_step*self.batch_size:(micro_step+1)*self.batch_size].to(device)
+                        batch_y_small = batch_y[micro_step*self.batch_size:(micro_step+1)*self.batch_size].to(device)
+                        y_pred = self.model(batch_x_small)
+                        loss = self.criterion(y_pred, batch_y_small)    
+                        loss = loss / self.args.gradient_accumulation_steps
+                        if backward:
+                            loss.backward()
+                        accloss = accloss + loss
+                    return accloss  
+                    #  print(batch_x.shape)
+                        # if "sls" in self.args.opts["opt"]:
+                        #     closure = lambda : self.criterion(self.model(batch_x), batch_y)
+                        #     loss = self.optimizer.step(closure = closure)
+                        # else:
+                        
+                    
+                def closure_with_backward():
+                    return closure(backward=True)
                 if "sls" in self.args.opts["opt"]:
-                    closure = lambda : self.criterion(self.model(batch_x), batch_y)
-                    self.optimizer.zero_grad()
-                    loss = self.optimizer.step(closure = closure)
+                    loss = self.optimizer.step(closure = closure, closure_with_backward = closure_with_backward)
                 else:
-                    self.optimizer.zero_grad()
-                    y_pred = self.model(batch_x)
-
-                    loss = self.criterion(y_pred, batch_y)    
-                    loss.backward()
+                    loss = closure_with_backward()
                     self.optimizer.step()
-                  #  self.scheduler.step()      
-               # print(self.args.opts["opt"])
+                    #  self.scheduler.step()      
+                # print(self.args.opts["opt"])
                 if index % log_step == 0:
                     dict = {"loss": loss.item() , "time_per_step":time.time()-startsteptime}    
                     if "sls" in  self.args.opts["opt"]:
@@ -200,12 +213,12 @@ class Image_trainer():
                     else:
                         dict["step_size"+str(0)] = self.args.opts["lr"]#self.scheduler.get_last_lr()[0]
                     wandb.log(dict)
-                accloss = accloss + loss.item()
+                accloss2 = accloss2 + loss.item()
                 accsteps += 1
                # if index % np.max((1,int((len(data))*0.1))) == 0:
-                print(index*self.batch_size, accloss/ accsteps)
+                print(index*self.batch_size*self.args.gradient_accumulation_steps, accloss2/ accsteps)
                 accsteps = 0
-                accloss = 0
+                accloss2 = 0
             if not eval_ds == None:
                 accuracy, test_loss = self.evaluate(eval_ds)
                 print("accuracy at epoch", e, accuracy)
@@ -221,8 +234,9 @@ class Image_trainer():
         loss = 0.0
         self.model.eval()
         ds_len = len(data)
+        eval_ds = iter(data)
         for _ in range(ds_len):#len(data)):
-            batch_x, batch_y = next(iter(data))
+            batch_x, batch_y = next(eval_ds)
             batch_x = batch_x.to(device)
             batch_y = batch_y.to(device)
             y_pred = self.model(batch_x)

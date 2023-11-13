@@ -219,7 +219,7 @@ def load_wikiandbook(batch_size):
 from torch.utils.data import Dataset
 import torchvision
 
-def getCifar10(batch_size):
+def getCifar10(batch_size,gradient_accumulation_steps):
     transform_train = torchvision.transforms.Compose([
         torchvision.transforms.RandomCrop(32, padding=4),
         torchvision.transforms.RandomHorizontalFlip(),
@@ -235,7 +235,7 @@ def getCifar10(batch_size):
     trainset = torchvision.datasets.CIFAR10(
         root=rootdir, train=True, download=True, transform=transform_train)
     trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=batch_size, shuffle=True)
+        trainset, batch_size=batch_size*gradient_accumulation_steps, shuffle=True)
 
     testset = torchvision.datasets.CIFAR10(
         root=rootdir, train=False, download=True, transform=transform_test)
@@ -243,7 +243,7 @@ def getCifar10(batch_size):
         testset, batch_size=batch_size, shuffle=False)
     return trainloader, testloader
 
-def getCifar100(batch_size):
+def getCifar100(batch_size, gradient_accumulation_steps):
     transform_train = torchvision.transforms.Compose([
         torchvision.transforms.RandomCrop(32, padding=4),
         torchvision.transforms.RandomHorizontalFlip(),
@@ -259,7 +259,7 @@ def getCifar100(batch_size):
     trainset = torchvision.datasets.CIFAR100(
         root=rootdir, train=True, download=True, transform=transform_train)
     trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=batch_size, shuffle=True)
+        trainset, batch_size=batch_size*gradient_accumulation_steps, shuffle=True)
 
     testset = torchvision.datasets.CIFAR100(
         root=rootdir, train=False, download=True, transform=transform_test)
@@ -267,7 +267,7 @@ def getCifar100(batch_size):
         testset, batch_size=batch_size, shuffle=False)
     return trainloader, testloader
 
-def getImageNet(batch_size):
+def getImageNet(batch_size, gradient_accumulation_steps):
     transform_train = torchvision.transforms.Compose([
         torchvision.transforms.Resize((256), interpolation=torchvision.transforms.InterpolationMode.BILINEAR, antialias=True),
         torchvision.transforms.RandomCrop((224)),
@@ -286,7 +286,7 @@ def getImageNet(batch_size):
     trainset = torchvision.datasets.ImageNet(
         root=rootdir, split = "train", transform=transform_train)
     trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=batch_size, shuffle=True)
+        trainset, batch_size=batch_size*gradient_accumulation_steps, shuffle=True)
 
     testset = torchvision.datasets.ImageNet(
         root=rootdir, split= "val", transform=transform_test)
