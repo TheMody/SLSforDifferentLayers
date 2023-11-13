@@ -107,13 +107,16 @@ class StochLineSearchBase(torch.optim.Optimizer):
             beta_small = 0.999
             beta_momentum = 0.99
          #   armijo = True
-            small_step_size = 5e-8
+            small_step_size = 5e-9
             step_size = step_size /beta_small
 
             #estimate g_norm for optimizers with momentum
             self.update_step( small_step_size, params_current, grad_current, precond=precond)
             loss_next = closure_deterministic()
             loss_decrease = (loss-loss_next)
+
+         #   print("gradient according to pp_norm", g_norm)
+
             g_norm = loss_decrease / small_step_size
             while g_norm == 0.0:#abs(loss_decrease)  < 2e-7:
                 print("g_norm is  zero, this indicates a numerical error, most likely training should be stopped, increasing min step size")
@@ -124,6 +127,7 @@ class StochLineSearchBase(torch.optim.Optimizer):
                 loss_next = closure_deterministic()
                 loss_decrease = (loss-loss_next)
                 g_norm = loss_decrease / small_step_size
+           # print("gradient according to estimate", g_norm)
             # if g_norm < 0.0:
             #     g_norm = 0.0
             self.g_norm_momentum = g_norm * (1-beta_momentum) + self.g_norm_momentum * beta_momentum

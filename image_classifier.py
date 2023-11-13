@@ -55,10 +55,6 @@ class Image_trainer():
             self.model = EfficientNetModel(configuration)
             out_shape = 2560
         
-        if args.model == "resNet50":
-            configuration = ResNetConfig() #this is resnet 50
-            self.model = ResNetModel(configuration)
-            out_shape = 2048
         if args.model == "preresNet34":
             self.model =  ResNetModel.from_pretrained("microsoft/resnet-34")
             out_shape = 512
@@ -74,6 +70,9 @@ class Image_trainer():
         # elif args.model == "resNet50":
         #     self.model = ResNet50(num_classes).to(device)
         #     #out_shape = 512
+        elif args.model == "resNet50":
+            self.model = ResNet50(num_classes).to(device)
+            out_shape = 2048
         else:
             self.model = Image_model(self.model, out_shape, num_classes).to(device)
         self.model = torch.compile(self.model)
@@ -127,7 +126,7 @@ class Image_trainer():
             if args.opts["opt"] == "sgd":    
                 self.optimizer = optim.SGD(self.model.parameters(), lr=args.opts["lr"] )
             if args.opts["opt"] == "kensls":    
-                self.optimizer = KenSLS( [param for name,param in self.named_parameters() if not "pooler" in name] ,beta_s = self.args.beta, c = self.args.c)
+                self.optimizer = KenSLS( [param for name,param in self.model.named_parameters() if not "pooler" in name] ,beta_s = self.args.beta, c = self.args.c)
             if args.opts["opt"] == "oladamsls":    
                 self.optimizer = AdamSLS( [[param for name,param in self.model.named_parameters() if not "pooler" in name]] , c = 0.1, smooth = False )
             if args.opts["opt"] == "olsgdsls":    
@@ -184,6 +183,7 @@ class Image_trainer():
                         if "kensls" in self.args.opts["opt"]:
                             for key in self.optimizer.state["log_dict"]:
                                 dict[key] = self.optimizer.state["log_dict"][key]
+                            dict["cosine_similarity"] = self.optimizer.state["cosine_similarity"]
                             dict["step_size0"] = self.optimizer.state["step_size"]
                             dict["loss_decrease"] = self.optimizer.state["loss_decrease"]
                             dict["gradient_norm"] = self.optimizer.state["gradient_norm"]

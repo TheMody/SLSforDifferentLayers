@@ -22,7 +22,6 @@ class KenSLS(StochLineSearchBase):
                  gv_option='per_param',
                  base_opt='adam',
                  pp_norm_method='pp_armijo',
-                 strategy = "cycle",
                  mom_type='standard',
                  clip_grad=False,
                  beta_b=0.9,
@@ -170,66 +169,66 @@ class KenSLS(StochLineSearchBase):
         step_size , loss_next = self.line_search(step_size, params_current, grad_current,g_norm, loss, closure_deterministic, precond=True)
 
         
-        if self.state['step'] % 20 == 0 or (loss- loss_next).item() < 0:
-            with torch.no_grad():
-                #loss_next  = torch.Tensor([0])
-                losses, step_sizes = self.basic_line_search(5e-3, params_current, grad_current, closure_deterministic, precond=True)
+        # if self.state['step'] % 20 == 0 or (loss- loss_next).item() < 0:
+        #     with torch.no_grad():
+        #         #loss_next  = torch.Tensor([0])
+        #         losses, step_sizes = self.basic_line_search(5e-3, params_current, grad_current, closure_deterministic, precond=True)
                 
-                lossesdec = [(loss - l).cpu().numpy() for l in losses]
-                losses = [ l.cpu().numpy() for l in losses]
+        #         lossesdec = [(loss - l).cpu().numpy() for l in losses]
+        #         losses = [ l.cpu().numpy() for l in losses]
             
-            dict = {"step_sizes": step_sizes, "lossesdec": lossesdec, 
-                "armijo": [self.c*self.state['gradient_norm'] * s for s in step_sizes], 
-                "current_step": (step_size, (loss-loss_next).item()), 
-                "optimum_step": (step_sizes[np.argmax(lossesdec)], lossesdec[np.argmax(lossesdec)]) }
-            self.axlist.append(dict)
-            if len(self.axlist) > 100:
-                self.axlist.pop(0)
-            loss_surface = np.asarray([self.axlist[i]["lossesdec"] for i in range(len(self.axlist))])
+        #     dict = {"step_sizes": step_sizes, "lossesdec": lossesdec, 
+        #         "armijo": [self.c*self.state['gradient_norm'] * s for s in step_sizes], 
+        #         "current_step": (step_size, (loss-loss_next).item()), 
+        #         "optimum_step": (step_sizes[np.argmax(lossesdec)], lossesdec[np.argmax(lossesdec)]) }
+        #     self.axlist.append(dict)
+        #     if len(self.axlist) > 100:
+        #         self.axlist.pop(0)
+        #     loss_surface = np.asarray([self.axlist[i]["lossesdec"] for i in range(len(self.axlist))])
 
-            #normal plot of current loss landscape
-            plt.plot(step_sizes, lossesdec)#,'-gD', markevery = [next_pos])
-            plt.plot(step_sizes, dict["armijo"], c = "k")
-            plt.scatter(dict["current_step"][0], dict["current_step"][1], c = 'r')
-            plt.scatter(dict["optimum_step"][0], dict["optimum_step"][1], c = 'g')
-            plt.xscale('log')
-            plt.ylim((-lossesdec[np.argmax(lossesdec)]*1.1,lossesdec[np.argmax(lossesdec)]*1.1))
-            plt.savefig("plots/losslandscape"+ str(self.state['step']) +".png")
-            plt.clf()
+        #     #normal plot of current loss landscape
+        #     plt.plot(step_sizes, lossesdec)#,'-gD', markevery = [next_pos])
+        #     plt.plot(step_sizes, dict["armijo"], c = "k")
+        #     plt.scatter(dict["current_step"][0], dict["current_step"][1], c = 'r')
+        #     plt.scatter(dict["optimum_step"][0], dict["optimum_step"][1], c = 'g')
+        #     plt.xscale('log')
+        #     plt.ylim((-lossesdec[np.argmax(lossesdec)]*1.1,lossesdec[np.argmax(lossesdec)]*1.1))
+        #     plt.savefig("plots/losslandscape"+ str(self.state['step']) +".png")
+        #     plt.clf()
 
-            #plot of current loss landscape and fading past ones
-            len_fade = 10
-            for i,d in enumerate(self.axlist[-len_fade:]):
-                plt.plot(d["step_sizes"], d["lossesdec"], color = (0,0,1,(i+1)/len(self.axlist[-len_fade:])))#,'-gD', markevery = [next_pos])
-              #  plt.plot(d["step_sizes"], d["armijo"], color = (0,0,0,(i+1)/len(self.axlist[-len_fade:])))
-                plt.scatter(d["current_step"][0], d["current_step"][1], color = (1,0,0,(i+1)/len(self.axlist[-len_fade:])))
-                plt.scatter(d["optimum_step"][0], d["optimum_step"][1], color = (0,1,0,(i+1)/len(self.axlist[-len_fade:])))
-            plt.xscale('log')
-            plt.ylim((-np.max(loss_surface[-len_fade:])*1.1,np.max(loss_surface[-len_fade:])*1.1))
-            plt.savefig("plots/losslandscapeoverlapped"+ str(self.state['step']) +".png")
-            plt.clf()
-
-
-            #img plot of current loss landscape and past ones
-            loss_surface_rgb = np.clip(loss_surface, -np.max(loss_surface), np.max(loss_surface))
-            im = plt.imshow(loss_surface_rgb, cmap =plt.cm.RdBu )
-            plt.colorbar(im)
-            plt.xticks([0,len(step_sizes)//4,len(step_sizes)//2,(len(step_sizes)//4)*3,len(step_sizes)-1],[5e-3,5e-4,5e-5,5e-6,5e-7])
-            plt.xlabel("step size")
-            plt.ylabel("step from 0(oldest) to youngest")
-            plt.scatter([np.argmin(np.abs(np.asarray(step_sizes)-a["current_step"][0])) for a in self.axlist], np.arange(len(self.axlist)), c = 'g')
-            plt.savefig("plots/losslandscapeimg"+ str(self.state['step']) +".png")
+        #     #plot of current loss landscape and fading past ones
+        #     len_fade = 10
+        #     for i,d in enumerate(self.axlist[-len_fade:]):
+        #         plt.plot(d["step_sizes"], d["lossesdec"], color = (0,0,1,(i+1)/len(self.axlist[-len_fade:])))#,'-gD', markevery = [next_pos])
+        #       #  plt.plot(d["step_sizes"], d["armijo"], color = (0,0,0,(i+1)/len(self.axlist[-len_fade:])))
+        #         plt.scatter(d["current_step"][0], d["current_step"][1], color = (1,0,0,(i+1)/len(self.axlist[-len_fade:])))
+        #         plt.scatter(d["optimum_step"][0], d["optimum_step"][1], color = (0,1,0,(i+1)/len(self.axlist[-len_fade:])))
+        #     plt.xscale('log')
+        #     plt.ylim((-np.max(loss_surface[-len_fade:])*1.1,np.max(loss_surface[-len_fade:])*1.1))
+        #     plt.savefig("plots/losslandscapeoverlapped"+ str(self.state['step']) +".png")
+        #     plt.clf()
 
 
-            imgimg = Image.open("plots/losslandscapeimg"+ str(self.state['step']) +".png")
-            imgimg = wandb.Image(imgimg, caption="losslandscapeimg " + str(self.state['step']))
-            imglapped = Image.open("plots/losslandscapeoverlapped"+ str(self.state['step']) +".png")
-            imglapped = wandb.Image(imglapped, caption="losslandscapeoverlapped " + str(self.state['step']))
-            img = Image.open("plots/losslandscape"+ str(self.state['step']) +".png")
-            img = wandb.Image(img, caption="step " + str(self.state['step'])+ " loss_change: " + str((loss-loss_next).item()))
-            self.state["log_dict"] = {"loss landscape": img, "loss landscape img": imgimg, "loss landscape overlapped": imglapped}
+        #     #img plot of current loss landscape and past ones
+        #     loss_surface_rgb = np.clip(loss_surface, -np.max(loss_surface), np.max(loss_surface))
+        #     im = plt.imshow(loss_surface_rgb, cmap =plt.cm.RdBu )
+        #     plt.colorbar(im)
+        #     plt.xticks([0,len(step_sizes)//4,len(step_sizes)//2,(len(step_sizes)//4)*3,len(step_sizes)-1],[5e-3,5e-4,5e-5,5e-6,5e-7])
+        #     plt.xlabel("step size")
+        #     plt.ylabel("step from 0(oldest) to youngest")
+        #     plt.scatter([np.argmin(np.abs(np.asarray(step_sizes)-a["current_step"][0])) for a in self.axlist], np.arange(len(self.axlist)), c = 'g')
+        #     plt.savefig("plots/losslandscapeimg"+ str(self.state['step']) +".png")
 
-            plt.clf()
+
+        #     imgimg = Image.open("plots/losslandscapeimg"+ str(self.state['step']) +".png")
+        #     imgimg = wandb.Image(imgimg, caption="losslandscapeimg " + str(self.state['step']))
+        #     imglapped = Image.open("plots/losslandscapeoverlapped"+ str(self.state['step']) +".png")
+        #     imglapped = wandb.Image(imglapped, caption="losslandscapeoverlapped " + str(self.state['step']))
+        #     img = Image.open("plots/losslandscape"+ str(self.state['step']) +".png")
+        #     img = wandb.Image(img, caption="step " + str(self.state['step'])+ " loss_change: " + str((loss-loss_next).item()))
+        #     self.state["log_dict"] = {"loss landscape": img, "loss landscape img": imgimg, "loss landscape overlapped": imglapped}
+
+        #     plt.clf()
 
         self.step_size = step_size
         self.try_sgd_precond_update(self.params,self.step_size, params_current, grad_current, self.momentum)
@@ -288,13 +287,14 @@ class KenSLS(StochLineSearchBase):
     def get_pp_norm(self, grad_current):
         if self.pp_norm_method in ['pp_armijo', "just_pp"]:
             pp_norm = 0
-            for g_i, gv_i in zip(grad_current, self.state['gv']):
+            for g_i, gv_i, mv_i in zip(grad_current, self.state['gv'], self.state['mv']):
                 if self.base_opt == 'adam':
                     gv_i_scaled = scale_vector(gv_i, self.beta, self.state['step']+1)
                     pv_i = 1. / (torch.sqrt(gv_i_scaled) + 1e-8)
-                #    print(g_i.shape)
                     if self.pp_norm_method == 'pp_armijo':
-                        layer_norm = ((g_i**2) * pv_i).sum()
+                     #   sim = F.cosine_similarity(g_i, mv_i, dim = 0)
+                     #   signsim = torch.sign(sim)
+                        layer_norm = (((g_i)**2) * pv_i ).sum() #* F.cosine_similarity(g_i, mv_i, dim = 0)
                     elif self.pp_norm_method == "just_pp":
                         layer_norm = pv_i.sum()
                     else:
@@ -306,7 +306,20 @@ class KenSLS(StochLineSearchBase):
         else:
             raise ValueError('%s does not exist' % self.pp_norm_method)
 
-        return pp_norm
+        # zipped = zip( self.state['gv'], self.state['mv'])
+        # update_size_list = []
+        # for gv_i, mv_i in zipped:
+        #   #  gv_i_scaled = scale_vector(gv_i, self.beta, self.state['step']+1)
+        #     pv_list = 1. / (torch.sqrt(gv_i) + 1e-8)
+        #     #mv_i_scaled = scale_vector(mv_i, momentum, self.state['step']+1)
+        #     update_size_list.append(pv_list *  mv_i)
+
+        grad_vector = torch.cat([g_i.flatten() for g_i in grad_current])
+        momentum_vector = torch.cat([mv_i.flatten() for mv_i in self.state["mv"]])
+        self.state["cosine_similarity"] = F.cosine_similarity(grad_vector, momentum_vector, dim = 0)
+        # print("pp_norm", pp_norm)
+        # print("similarity", sim)
+        return pp_norm #* (sim**2)
 
 def scale_vector(vector, alpha, step, eps=1e-8):
     scale = (1-alpha**(max(1, step)))

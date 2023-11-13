@@ -197,6 +197,7 @@ class NLP_embedder(nn.Module):
                             for key in self.optimizer.state["log_dict"]:
                               #  print("key", key)
                                 dict[key] = self.optimizer.state["log_dict"][key]
+                            dict["cosine_similarity"] = self.optimizer.state["cosine_similarity"]
                             dict["step_size0"] = self.optimizer.state["step_size"]
                             dict["loss_decrease"] = self.optimizer.state["loss_decrease"]
                             dict["gradient_norm"] = self.optimizer.state["gradient_norm"]
