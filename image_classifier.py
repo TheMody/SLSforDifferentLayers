@@ -158,7 +158,7 @@ class Image_trainer():
         for e in range(epochs):
             self.model.train()
             dataiter = iter(data) #dataiter uses batchsize*self.args.gradient_accumulation_steps as batchisze
-            for index in range(len(data)//self.args.gradient_accumulation_steps):
+            for index in range(len(data)):
                 startsteptime = time.time()
                 self.optimizer.zero_grad()
                 batch_x, batch_y = next(dataiter)
