@@ -162,6 +162,8 @@ class Image_trainer():
                 startsteptime = time.time()
                 self.optimizer.zero_grad()
                 batch_x, batch_y = next(dataiter)
+                if batch_x.shape[0] != self.batch_size*self.args.gradient_accumulation_steps:
+                    continue
                 def closure(backward = False):
                     accloss = 0.0
                     for micro_step in range(self.args.gradient_accumulation_steps):

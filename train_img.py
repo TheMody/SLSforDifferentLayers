@@ -32,6 +32,7 @@ def train_img(args,config):
     args.gradient_accumulation_steps = int(config["DEFAULT"]["gradient_accumulation_steps"])
     cls = config["DEFAULT"]["cls"]
 
+    print("reading dataset")
     valds_name = "test"
     dataset_name = dataset
     resize = True
@@ -90,12 +91,6 @@ def train_img(args,config):
       data = load_dataset("inria-soda/tabular-benchmark", data_files="clf_num/pol.csv", split = "train[:10%]+train[90%:]")
       val_data = SimpleDataset_pol(data)
 
-    if cls == "dense":
-      img_cls = Dense_classifier(input_dim,256,num_classes,batch_size,args).to(device)
-    else:
-      img_cls = Image_trainer(num_classes,batch_size,args)
-    
-
     if dataset == "cifar10":
       from data import getCifar10
       train_dataloader,val_dataloader = getCifar10(batch_size,args.gradient_accumulation_steps)
@@ -105,6 +100,8 @@ def train_img(args,config):
     elif dataset == "imagenet":
       from data import getImageNet
       train_dataloader,val_dataloader = getImageNet(batch_size,args.gradient_accumulation_steps)
+
+
 
       # print("train images")
       # show_img(train_dataloader)
@@ -120,5 +117,11 @@ def train_img(args,config):
       train_dataloader = DataLoader(train_data, batch_size=batch_size*args.gradient_accumulation_steps, shuffle=True)
       val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=True)
 
+    print("constructing model")
+    if cls == "dense":
+      img_cls = Dense_classifier(input_dim,256,num_classes,batch_size,args).to(device)
+    else:
+      img_cls = Image_trainer(num_classes,batch_size,args)
 
+    print("start training")
     img_cls.fit(train_dataloader,max_epochs,val_dataloader)

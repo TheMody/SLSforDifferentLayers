@@ -39,7 +39,7 @@ def train(args, config):
     args.model = config["DEFAULT"]["model"]
     args.savepth = config["DEFAULT"]["directory"]
     args.c = float(config["DEFAULT"]["c"])
-    args.speed_up = bool(config["DEFAULT"]["speed_up"])
+    args.speed_up = config["DEFAULT"]["speed_up"] == "True"
     num_classes = 2
     if "mnli" in dataset:
         num_classes = 3
