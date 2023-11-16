@@ -54,7 +54,10 @@ class Image_trainer():
             configuration = EfficientNetConfig()
             self.model = EfficientNetModel(configuration)
             out_shape = 2560
-        
+        if args.model == "resNet50":
+            configuration = ResNetConfig() #this is resnet 50
+            self.model = ResNetModel(configuration)
+            out_shape = 2048
         if args.model == "preresNet34":
             self.model =  ResNetModel.from_pretrained("microsoft/resnet-34")
             out_shape = 512
@@ -70,11 +73,12 @@ class Image_trainer():
         # elif args.model == "resNet50":
         #     self.model = ResNet50(num_classes).to(device)
         #     #out_shape = 512
-        elif args.model == "resNet50":
-            self.model = ResNet50(num_classes).to(device)
-            out_shape = 2048
+        # elif args.model == "resNet50":
+        #     self.model = ResNet50(num_classes).to(device)
+        #     out_shape = 2048
         else:
             self.model = Image_model(self.model, out_shape, num_classes).to(device)
+        self.save_model = self.model
         self.model = torch.compile(self.model)
 
       #  self.preprocess_func = self.feature_extractor.preprocess
@@ -154,7 +158,7 @@ class Image_trainer():
         accuracy = None
         accsteps = 0
         accloss2 = 0
-        
+        peak_val_acc = 0.0
         for e in range(epochs):
             self.model.train()
             dataiter = iter(data) #dataiter uses batchsize*self.args.gradient_accumulation_steps as batchisze
@@ -223,6 +227,10 @@ class Image_trainer():
                 accloss2 = 0
             if not eval_ds == None:
                 accuracy, test_loss = self.evaluate(eval_ds)
+                if accuracy > peak_val_acc:
+                    peak_val_acc = accuracy
+                    print("peak val acc", peak_val_acc)
+                    torch.save(self.save_model, self.args.savepth+"/"+"model.pt")
                 print("accuracy at epoch", e, accuracy)
                 print("test loss at epoch", e, test_loss)
                 wandb.log({"accuracy": accuracy})

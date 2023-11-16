@@ -5,7 +5,7 @@ from dense_classifier import Dense_classifier
 import torch
 from torch.utils.data import DataLoader
 from utils import *
-
+import os
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def train_img(args,config):
     max_epochs = int(config["DEFAULT"]["epochs"])
@@ -25,6 +25,8 @@ def train_img(args,config):
     args.update_rule = config["DEFAULT"]["update_rule"]
     args.model = config["DEFAULT"]["model"]
     args.savepth = config["DEFAULT"]["directory"]
+    if not os.path.isdir(args.savepth):
+        os.mkdir(args.savepth)
     args.combine = float(config["DEFAULT"]["combine"])
     args.c = float(config["DEFAULT"]["c"])
     args.beta = float(config["DEFAULT"]["beta"])
